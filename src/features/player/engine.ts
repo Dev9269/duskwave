@@ -10,6 +10,14 @@ import {
 import type { Track } from '@/features/catalog/api';
 
 import { resolveAudioUrl } from './audio-source';
+import {
+  onPause as onScrobblePause,
+  onPlaybackProgress as onScrobbleProgress,
+  onTrackChange as onScrobbleTrackChange,
+  onTrackFinished as onScrobbleTrackFinished,
+  startScrobble,
+  type PlayContext,
+} from './scrobble';
 
 export type PlaybackSnapshot = {
   currentIndex: number;
@@ -41,6 +49,7 @@ const AUDIO_MODE: Partial<AudioMode> = {
 let handlers: EngineHandlers = {};
 let playlist: AudioPlaylist | null = null;
 let loadedTracks: Track[] = [];
+let loadedContext: PlayContext = 'history';
 let currentIndex = 0;
 let loaded = false;
 let loading = false;
@@ -48,6 +57,7 @@ let generation = 0;
 let pendingSkipIndex: number | null = null;
 let lockScreenActive = false;
 let audioModePromise: Promise<void> | null = null;
+let lastProgressMs = 0;
 
 function messageFrom(error: unknown): string {
   if (error instanceof Error && error.message.trim()) return error.message.trim();
@@ -129,9 +139,18 @@ function emitSnapshot(): void {
   handlers.onStatus?.(snapshotOf(playlist));
 }
 
+function progressMs(status: Pick<PlaybackSnapshot, 'currentTime'>): number {
+  return Math.max(0, Math.round(status.currentTime * 1000));
+}
+
+function durationMs(status: Pick<PlaybackSnapshot, 'duration'>): number {
+  return Math.max(0, Math.round(status.duration * 1000));
+}
+
 function handleStatus(status: AudioPlaylistStatus): void {
   if (loading) return;
 
+  lastProgressMs = progressMs(status);
   handlers.onStatus?.({
     currentIndex: status.currentIndex,
     trackCount: status.trackCount,
@@ -141,14 +160,40 @@ function handleStatus(status: AudioPlaylistStatus): void {
     isBuffering: status.isBuffering,
     isLoaded: status.isLoaded,
   });
+  void onScrobbleProgress(lastProgressMs, durationMs(status));
+}
+
+let scrobbleIndex: number | null = null;
+
+function beginScrobble(track: Track | undefined, index: number): void {
+  if (!track) return;
+  scrobbleIndex = index;
+  void startScrobble(track, loadedContext);
+}
+
+function finishScrobble(msPlayed: number, durationMs: number, mode: 'change' | 'end'): void {
+  if (scrobbleIndex == null) return;
+  scrobbleIndex = null;
+  if (mode === 'change') void onScrobbleTrackChange(msPlayed, durationMs);
+  else void onScrobbleTrackFinished(msPlayed, durationMs);
 }
 
 function handleTrackChanged(trackChange: TrackChange): void {
   if (loading) return;
 
+  const previousTrack = loadedTracks[trackChange.previousIndex];
+  const endedDurationMs =
+    previousTrack && Number.isFinite(previousTrack.durationMs) ? previousTrack.durationMs : 0;
+  if (previousTrack) {
+    finishScrobble(lastProgressMs, endedDurationMs, 'change');
+  }
+
   currentIndex = trackChange.currentIndex;
+  lastProgressMs = 0;
   updateLockScreen();
   handlers.onTrackChanged?.(trackChange);
+
+  beginScrobble(loadedTracks[currentIndex], currentIndex);
 }
 
 function ensurePlaylist(): AudioPlaylist {
@@ -168,16 +213,28 @@ export function setEngineHandlers(nextHandlers: EngineHandlers): void {
 export async function loadQueue(
   tracks: Track[],
   startIndex: number,
-  options: { autoplay?: boolean } = {},
+  options: { autoplay?: boolean; context?: PlayContext } = {},
 ): Promise<boolean> {
   const autoplay = options.autoplay ?? true;
+  const context = options.context ?? 'history';
   const token = generation + 1;
   generation = token;
+
+  const previousTrack = loadedTracks[currentIndex];
+  const previousProgressMs = lastProgressMs;
   loading = true;
   pendingSkipIndex = null;
   loaded = false;
   loadedTracks = [];
+  loadedContext = context;
   currentIndex = 0;
+  lastProgressMs = 0;
+
+  if (previousTrack || scrobbleIndex != null) {
+    finishScrobble(previousProgressMs, previousTrack?.durationMs ?? 0, 'end');
+  } else {
+    void onScrobbleTrackFinished(previousProgressMs, 0);
+  }
 
   const active = playlist;
   if (active) {
@@ -221,6 +278,7 @@ export async function loadQueue(
     if (autoplay) {
       target.play();
       activateLockScreen();
+      beginScrobble(loadedTracks[currentIndex], currentIndex);
     }
     emitSnapshot();
     return true;
@@ -255,12 +313,20 @@ export function play(): boolean {
     return false;
   }
   activateLockScreen();
+  if (scrobbleIndex !== currentIndex) {
+    beginScrobble(loadedTracks[currentIndex], currentIndex);
+  }
   return true;
 }
 
 export function pause(): boolean {
   if (!loaded || !playlist) return false;
 
+  const currentTrack = loadedTracks[currentIndex];
+  const duration = currentTrack?.durationMs ?? 0;
+  if (scrobbleIndex === currentIndex) {
+    void onScrobblePause(lastProgressMs, duration);
+  }
   try {
     playlist.pause();
     return true;
@@ -279,8 +345,7 @@ export function skipTo(index: number): boolean {
 
   try {
     playlist.skipTo(index);
-    currentIndex = index;
-    updateLockScreen();
+    // index and scrobble transitions are handled by trackChanged listener when emitted.
     return true;
   } catch (error) {
     reportError(error);
@@ -318,12 +383,16 @@ export async function appendTrack(track: Track): Promise<boolean> {
 }
 
 export function clearQueue(): void {
+  const currentTrack = loadedTracks[currentIndex];
+  finishScrobble(lastProgressMs, currentTrack?.durationMs ?? 0, 'end');
+
   generation += 1;
   loading = false;
   loaded = false;
   loadedTracks = [];
   currentIndex = 0;
   pendingSkipIndex = null;
+  lastProgressMs = 0;
 
   if (playlist) {
     try {
@@ -337,6 +406,9 @@ export function clearQueue(): void {
 }
 
 export function destroyEngine(): void {
+  const currentTrack = loadedTracks[currentIndex];
+  finishScrobble(lastProgressMs, currentTrack?.durationMs ?? 0, 'end');
+
   generation += 1;
   loading = false;
   loaded = false;
@@ -345,6 +417,8 @@ export function destroyEngine(): void {
   pendingSkipIndex = null;
   lockScreenActive = false;
   audioModePromise = null;
+  lastProgressMs = 0;
+  scrobbleIndex = null;
 
   const active = playlist;
   playlist = null;

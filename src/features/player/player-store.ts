@@ -97,7 +97,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     set({ ...snapshot, isPlaying: false, error: null });
 
     try {
-      const applied = await loadQueue(snapshot.queue, snapshot.index);
+      const applied = await loadQueue(snapshot.queue, snapshot.index, { context });
       if (applied) set({ error: null });
     } catch (error) {
       set({ error: errorMessage(error), isPlaying: false });
@@ -161,7 +161,7 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       set({ ...snapshot, isPlaying: false, error: null });
 
       try {
-        await loadQueue(snapshot.queue, 0, { autoplay: false });
+        await loadQueue(snapshot.queue, 0, { autoplay: false, context: snapshot.context });
         set({ error: null });
       } catch (error) {
         set({ error: errorMessage(error), isPlaying: false });
