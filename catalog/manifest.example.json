@@ -1,0 +1,89 @@
+{
+  "version": 1,
+  "tracks": [
+    {
+      "slug": "night-drive",
+      "title": "Night Drive",
+      "artist": "Example Artist",
+      "album": "After Hours",
+      "genre": "ambient",
+      "mood": "nocturnal",
+      "durationMs": 214000,
+      "audioUrl": "https://example.com/audio/night-drive.mp3",
+      "artworkUrl": "https://example.com/art/night-drive.jpg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Example Artist — CC BY 4.0"
+    },
+    {
+      "slug": "blue-hour",
+      "title": "Blue Hour",
+      "artist": "Example Artist",
+      "album": "After Hours",
+      "genre": "downtempo",
+      "mood": "hazy",
+      "durationMs": 187000,
+      "audioUrl": "https://example.com/audio/blue-hour.mp3",
+      "artworkUrl": "https://example.com/art/blue-hour.jpg",
+      "license": "CC BY 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/4.0/",
+      "attribution": "Example Artist — CC BY 4.0"
+    },
+    {
+      "slug": "streetlight-choir",
+      "title": "Streetlight Choir",
+      "artist": "Second Example",
+      "album": "Small Hours",
+      "genre": "indie",
+      "mood": "wistful",
+      "durationMs": 236000,
+      "audioUrl": "https://example.com/audio/streetlight-choir.mp3",
+      "artworkUrl": "https://example.com/art/streetlight-choir.jpg",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "attribution": "Second Example — CC BY-SA 4.0"
+    },
+    {
+      "slug": "rain-on-the-overpass",
+      "title": "Rain on the Overpass",
+      "artist": "Second Example",
+      "album": "Small Hours",
+      "genre": "electronic",
+      "mood": "rainy",
+      "durationMs": 258000,
+      "audioUrl": "https://example.com/audio/rain-on-the-overpass.mp3",
+      "artworkUrl": "https://example.com/art/rain-on-the-overpass.jpg",
+      "license": "CC BY-SA 4.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by-sa/4.0/",
+      "attribution": "Second Example — CC BY-SA 4.0"
+    },
+    {
+      "slug": "last-train-home",
+      "title": "Last Train Home",
+      "artist": "Third Example",
+      "album": "Platforms",
+      "genre": "jazz",
+      "mood": "smoky",
+      "durationMs": 301000,
+      "audioUrl": "https://example.com/audio/last-train-home.mp3",
+      "artworkUrl": "https://example.com/art/last-train-home.jpg",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "attribution": "Third Example — CC BY 3.0"
+    },
+    {
+      "slug": "moonlit-verge",
+      "title": "Moonlit Verge",
+      "artist": "Third Example",
+      "album": "Platforms",
+      "genre": "classical",
+      "mood": "still",
+      "durationMs": 274000,
+      "audioUrl": "https://example.com/audio/moonlit-verge.mp3",
+      "artworkUrl": "https://example.com/art/moonlit-verge.jpg",
+      "license": "CC BY 3.0",
+      "licenseUrl": "https://creativecommons.org/licenses/by/3.0/",
+      "attribution": "Third Example — CC BY 3.0"
+    }
+  ]
+}
