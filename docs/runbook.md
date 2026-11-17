@@ -107,6 +107,23 @@ SecureStore value) shows `state_mismatch`.
 
 ## 7. Catalog seeding
 
+1. Create a free Jamendo developer account at https://devportal.jamendo.com, register an app,
+   and copy its Client ID. Put it in `.env.local` as `JAMENDO_CLIENT_ID` (server-side only —
+   never expose it to the app bundle).
+2. Fetch a licensed catalog. The fetcher requests MP3 audio from
+   `https://api.jamendo.com/v3.0/tracks/` and skips tracks missing a playable MP3, positive
+   duration, artwork, or Creative Commons license URL. It validates the manifest with
+   `CatalogManifestSchema` before writing and logs fetched, mapped, skipped, and duplicate counts.
+
+```powershell
+npm.cmd run fetch:catalog
+npm.cmd run fetch:catalog -- --limit 50 --out catalog/manifest.json
+```
+
+`--limit` defaults to 200 (Jamendo records fetched); `--out` defaults to `catalog/manifest.json`.
+
+3. Seed the manifest:
+
 ```powershell
 npm.cmd run seed:catalog -- --dry-run
 npm.cmd run seed:catalog -- --limit 25
@@ -114,9 +131,9 @@ npm.cmd run seed:catalog -- --force
 npm.cmd run seed:catalog -- --verify
 ```
 
-The script is idempotent: tracks are keyed by slug, artists by name. `--dry-run` prints the plan
-without writing. `--verify` re-reads the catalog and reports audio-key gaps. The manifest lives
-in `scripts/catalog-manifest.json`; audio licenses stay attached to every track row.
+The seed script is idempotent: tracks are keyed by slug, artists by name. `--dry-run` prints the
+plan without writing. `--verify` re-reads the catalog and reports audio-key gaps. The manifest
+lives in `catalog/manifest.json`; audio licenses stay attached to every track row.
 
 Demo history for a signed-in account: Settings → "Load demo history" (calls
 `seed_demo_history()`; one-shot per profile).
