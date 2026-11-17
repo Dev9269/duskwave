@@ -40,6 +40,9 @@ function RootNavigator() {
       </Stack.Protected>
       <Stack.Protected guard={session !== null && onboarded}>
         <Stack.Screen name="(tabs)" />
+        <Stack.Screen name="player" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="settings/index" />
+        <Stack.Screen name="licenses" />
       </Stack.Protected>
     </Stack>
   );

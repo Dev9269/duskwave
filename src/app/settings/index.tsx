@@ -75,6 +75,26 @@ export default function SettingsScreen() {
           />
         </Card>
 
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open licenses and attributions"
+          onPress={() => router.push('/licenses')}
+          style={({ pressed }) => [styles.linkCard, pressed && styles.pressed]}
+        >
+          <Card style={styles.linkRow}>
+            <View style={styles.linkIcon}>
+              <Ionicons name="shield-checkmark-outline" size={20} color={colors.accent} />
+            </View>
+            <View style={styles.linkText}>
+              <Text variant="heading">Licenses & attribution</Text>
+              <Text variant="caption" muted>
+                Creative Commons licenses and credits for catalog tracks.
+              </Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+          </Card>
+        </Pressable>
+
         <Button
           label="Sign out"
           variant="danger"
@@ -110,5 +130,17 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
   },
   section: { gap: spacing.sm },
+  linkCard: { borderRadius: 16 },
+  linkRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  linkIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: colors.surfaceRaised,
+  },
+  linkText: { flex: 1, gap: 2 },
+  pressed: { opacity: 0.9 },
   note: { paddingHorizontal: spacing.xs },
 });
