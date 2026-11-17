@@ -1,56 +1,74 @@
-# Welcome to your Expo app 👋
+# Duskwave
 
-This is an [Expo](https://expo.dev) project created with [`create-expo-app`](https://www.npmjs.com/package/create-expo-app).
+A dark, editorial music streaming app — built from scratch as an open-source portfolio project.
 
-## Get started
+Duskwave plays a curated catalog of Creative Commons licensed music, imports your Spotify playlists
+as metadata (never audio), hosts realtime Jam listening rooms, and grows pair-based Blend playlists
+from shared taste. No copied assets, no proprietary code, no Spotify audio.
 
-1. Install dependencies
+**Status:** Milestone M0 (foundation) — in progress.
 
-   ```bash
-   npm install
-   ```
+## Features
 
-2. Start the app
+- **Catalog & playback** — ~200 CC-licensed tracks, search with genre/mood/BPM filters, queue,
+  shuffle/repeat, background playback and lock-screen controls.
+- **Playlists & uploads** — create, reorder, like songs, upload your own audio (owner-private).
+- **Spotify importer** — OAuth + PKCE metadata import with honest matching: exact, suggested vibe
+  match, or clearly labeled placeholder. Your Spotify audio is never touched.
+- **Jam** — host-authoritative realtime listening rooms with shared queue, presence, and ±250 ms sync.
+- **Blend** — deterministic taste-match playlists for two people, refreshed weekly.
+- **History & stats** — scrobbles, weekly minutes, top artists, listening streaks.
+- **Premium simulation** — server-enforced skip/upload limits, demo checkout, offline downloads.
+- **Demo mode** — one tap loads two weeks of listening history so charts and Blend look alive.
 
-   ```bash
-   npx expo start
-   ```
+## Stack
 
-In the output, you'll find options to open the app in a
+Expo SDK 58 · React Native 0.88 · TypeScript strict · Expo Router · expo-audio · Zustand ·
+TanStack Query · Supabase (Postgres + RLS, Auth, Storage, Realtime, Edge Functions) ·
+Cloudflare R2 · GitHub Actions + EAS.
 
-- [development build](https://docs.expo.dev/develop/development-builds/introduction/)
-- [Android emulator](https://docs.expo.dev/workflow/android-studio-emulator/)
-- [iOS simulator](https://docs.expo.dev/workflow/ios-simulator/)
-- [Expo Go](https://expo.dev/go), a limited sandbox for trying out app development with Expo
+## Quickstart
 
-You can start developing by editing the files inside the **src/app** directory. This project uses [file-based routing](https://docs.expo.dev/router/introduction).
-
-## Get a fresh project
-
-When you're ready, run:
-
-```bash
-npm run reset-project
+```powershell
+# Node 22 LTS is required (see .node-version)
+npm.cmd install
+Copy-Item .env.example .env.local   # fill in Supabase + R2 + Spotify values
+npm.cmd start
 ```
 
-This command will move the starter code to the **example** directory and create a blank **src/app** directory where you can start developing.
+App config: scheme `duskwave`; Spotify OAuth redirect `duskwave://redirect`.
+Testing the deep link once a dev build is installed:
 
-### Other setup steps
+```powershell
+adb shell am start -a android.intent.action.VIEW -d "duskwave://redirect?code=test&state=test"
+```
 
-- To set up ESLint for linting, run `npx expo lint`, or follow our guide on ["Using ESLint and Prettier"](https://docs.expo.dev/guides/using-eslint/)
-- If you'd like to set up unit testing, follow our guide on ["Unit Testing with Jest"](https://docs.expo.dev/develop/unit-testing/)
-- Learn more about the TypeScript setup in this template in our guide on ["Using TypeScript"](https://docs.expo.dev/guides/typescript/)
+Operator setup (Supabase, Spotify dashboard, R2, EAS) lives in [docs/runbook.md](docs/runbook.md).
 
-## Learn more
+## Commands
 
-To learn more about developing your project with Expo, look at the following resources:
+| Command | Purpose |
+| --- | --- |
+| `npm.cmd run start` | Expo dev server |
+| `npm.cmd run typecheck` | TypeScript |
+| `npm.cmd run lint` | ESLint |
+| `npm.cmd test` | Jest |
+| `npm.cmd run seed:catalog -- --dry-run` | Validate catalog manifest |
+| `npm.cmd run seed:catalog` | Upload catalog to R2 + Supabase (idempotent) |
 
-- [Expo documentation](https://docs.expo.dev/): Learn fundamentals, or go into advanced topics with our [guides](https://docs.expo.dev/guides).
-- [Learn Expo tutorial](https://docs.expo.dev/tutorial/introduction/): Follow a step-by-step tutorial where you'll create a project that runs on Android, iOS, and the web.
+## Roadmap
 
-## Join the community
+- [x] M0 — Foundation: repo, CI, auth, design system, tab shell, deep links, DB baseline, seeder
+- [ ] M1 — Catalog + playback
+- [ ] M2 — Playlists + uploads
+- [ ] M3 — Spotify importer
+- [ ] M4 — Jam
+- [ ] M5 — Blend + listening stats
+- [ ] M6 — Premium simulation
+- [ ] M7 — Polish, E2E, demo video, release APK
 
-Join our community of developers creating universal apps.
+## Legal
 
-- [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
-- [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
+Catalog audio is Creative Commons licensed; every track ships with license and attribution shown
+in-app. Spotify integration uses the official Web API for metadata only, with user-initiated OAuth.
+Duskwave is not affiliated with Spotify. Uploaded audio stays private to its owner.
