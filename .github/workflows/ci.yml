@@ -28,9 +28,10 @@ jobs:
     timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
-      - uses: supabase/setup-cli-action@v1
+      - uses: actions/setup-node@v4
         with:
-          version: latest
-      - run: supabase start
-      - run: supabase db reset
-      - run: supabase test db
+          node-version: 22
+          cache: npm
+      - run: npx --yes supabase@latest start
+      - run: npx --yes supabase@latest db reset
+      - run: npx --yes supabase@latest test db
