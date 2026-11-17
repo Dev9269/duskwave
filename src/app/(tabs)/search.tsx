@@ -24,6 +24,7 @@ import { EmptyState, Pill, PlayerBar, Screen, Text, TextField, TrackRow, spacing
 export default function SearchScreen() {
   const { session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
+  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilterState>(DEFAULT_SEARCH_FILTERS);
   const debouncedQuery = useDebouncedValue(query, 300);
@@ -163,9 +164,11 @@ export default function SearchScreen() {
             </View>
           </View>
         ) : null}
-        <View style={styles.playerWrap}>
-          <PlayerBar />
-        </View>
+        {hasQueue ? (
+          <View style={styles.playerWrap}>
+            <PlayerBar />
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );

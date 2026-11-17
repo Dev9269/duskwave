@@ -14,6 +14,7 @@ const HOME_MOOD = 'chill';
 export default function HomeScreen() {
   const { profile, session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
+  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const firstName = profile?.display_name?.split(' ')[0] || 'listener';
   const enabled = isSupabaseConfigured && !!session;
 
@@ -88,9 +89,11 @@ export default function HomeScreen() {
             </View>
           </>
         ) : null}
-        <View style={styles.playerWrap}>
-          <PlayerBar />
-        </View>
+        {hasQueue ? (
+          <View style={styles.playerWrap}>
+            <PlayerBar />
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );

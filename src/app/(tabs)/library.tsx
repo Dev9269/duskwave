@@ -23,6 +23,7 @@ import {
 export default function LibraryScreen() {
   const { session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
+  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const enabled = isSupabaseConfigured && !!session;
   const liked = useLikedTracks(enabled);
   const likedTracks = liked.data ?? [];
@@ -108,9 +109,11 @@ export default function LibraryScreen() {
             Free accounts get three uploads. Premium unlocks more, plus offline and crossfade.
           </Text>
         </Card>
-        <View style={styles.playerWrap}>
-          <PlayerBar />
-        </View>
+        {hasQueue ? (
+          <View style={styles.playerWrap}>
+            <PlayerBar />
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );

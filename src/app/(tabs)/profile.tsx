@@ -5,8 +5,11 @@ import { router } from 'expo-router';
 import { useSession } from '@/features/auth/session-provider';
 import { Card, Pill, PlayerBar, Screen, Text, colors, spacing } from '@/ui';
 
+import { usePlayerStore } from '@/features/player/player-store';
+
 export default function ProfileScreen() {
   const { profile, session } = useSession();
+  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const initial = (profile?.display_name || profile?.username || 'D').slice(0, 1).toUpperCase();
 
   return (
@@ -43,9 +46,11 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </Card>
         </Pressable>
-        <View style={styles.playerWrap}>
-          <PlayerBar />
-        </View>
+        {hasQueue ? (
+          <View style={styles.playerWrap}>
+            <PlayerBar />
+          </View>
+        ) : null}
       </ScrollView>
     </Screen>
   );

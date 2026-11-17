@@ -19,6 +19,8 @@ export function PlayerBar() {
     if (!isEmpty) router.push('/player');
   };
 
+  if (isEmpty) return null;
+
   return (
     <Pressable
       accessibilityRole="button"
