@@ -114,6 +114,13 @@ npx.cmd supabase@latest functions serve r2-sign --env-file .env.local
 # http://127.0.0.1:54321/functions/v1/r2-sign
 ```
 
+
+### Playback, scrobbles, and resume
+
+- Scrobbles are recorded in public.plays with incremental ms_played updates and server-side clamping to track duration. Progress flushes every 10 s while playing, on pause/track change/finish, and pending entries are buffered in AsyncStorage offline then flushed on next launch/bootstrap.
+- The player restores the last queue paused on launch (track IDs, index, position, context), drops stale/unplayable IDs, clamps bounds, and never autoplays. Saves occur on pause/background and every 30 s while playing.
+- Native lock-screen/background playback and notification controls require a development/production build (not Expo Go); device verification of 5+ minute background playback and plays updates remains operator-gated (R8).
+
 ## 7. Catalog seeding
 
 1. Create a free Jamendo developer account at https://devportal.jamendo.com, register an app,
