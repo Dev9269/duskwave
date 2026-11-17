@@ -10,10 +10,6 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
   icon: './assets/images/icon.png',
   userInterfaceStyle: 'dark',
   backgroundColor: '#0B0B0F',
-  splash: {
-    backgroundColor: '#0B0B0F',
-    resizeMode: 'contain',
-  },
   ios: {
     supportsTablet: false,
     bundleIdentifier: 'com.dev9269.duskwave',

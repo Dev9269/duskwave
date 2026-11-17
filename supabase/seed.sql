@@ -1,0 +1,2 @@
+-- Local seed placeholder. The CC catalog is loaded with `npm run seed:catalog`,
+-- which talks to the Storage/R2 bucket and the Postgres API directly.
