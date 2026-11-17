@@ -6,7 +6,7 @@ Duskwave plays a curated catalog of Creative Commons licensed music, imports you
 as metadata (never audio), hosts realtime Jam listening rooms, and grows pair-based Blend playlists
 from shared taste. No copied assets, no proprietary code, no Spotify audio.
 
-**Status:** Milestone M0 (foundation) — in progress.
+**Status:** Milestone M0 (foundation) — complete. M1 (catalog + playback) next.
 
 ## Features
 

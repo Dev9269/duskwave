@@ -233,3 +233,8 @@ export default ({ config }: ConfigContext): ExpoConfig => ({
 - Spec coverage: M0 items from spec §9 map to Tasks 1–10 (repo/config), 2 (design system), 4 (DB), 5 (auth), 6 (shell), 7 (deep link + runbook), 8 (seed), 9 (CI/docs). M1+ features are intentionally out of this plan.
 - Placeholders: none; all code paths and commands are explicit. Environment-dependent steps (Supabase project creation, EAS login, Spotify dashboard, R2 credentials) are documented as operator steps in the runbook rather than faked.
 - Type consistency: `SessionProvider`/`useSession`, `getSupabase()`, `CatalogManifestSchema`, `SPOTIFY_REDIRECT_URI`, and `formatDuration` are named identically across tasks.
+
+## Progress log
+
+- 2026-11-17: Tasks 1-10 implemented. typecheck/lint/jest green (18 tests); pgTAP 12/12 pass against local Supabase; seed:catalog --dry-run --limit 5 prints 5 planned entries; expo config shows scheme, IDs, and the expo-audio background plugin; expo-doctor 20/20.
+- Deviations: npm run lint calls ESLint directly (expo lint rejected ESLint 9.39 here); tsconfig includes jest+node types; added expo-asset peer for expo-audio; js-tabs resolved through the expo-router exports map.
