@@ -21,6 +21,54 @@ from shared taste. No copied assets, no proprietary code, no Spotify audio.
 - **Premium simulation** — server-enforced skip/upload limits, demo checkout, offline downloads.
 - **Demo mode** — one tap loads two weeks of listening history so charts and Blend look alive.
 
+## Architecture
+
+```text
+                    ┌───────────────────────────────────────┐
+                    │            Expo app (RN)              │
+                    │  Expo Router · expo-audio · Zustand   │
+                    │  TanStack Query · SecureStore          │
+                    └──────────────┬────────────────────────┘
+             PKCE auth + RLS data  │  Realtime broadcast/presence
+                    ┌──────────────▼────────────────────────┐
+                    │               Supabase                │
+                    │  Auth · Postgres + RLS · Storage       │
+                    │  Realtime · Edge Functions             │
+                    │    · spotify-import (token exchange)   │
+                    │    · r2-sign (short-lived audio URLs)  │
+                    └───────┬───────────────────────┬────────┘
+        signed audio URLs   │                       │ metadata import
+                    ┌───────▼────────┐      ┌───────▼─────────────┐
+                    │ Cloudflare R2  │      │ Spotify Web API     │
+                    │ CC audio + art │      │ playlists only      │
+                    └────────────────┘      └─────────────────────┘
+```
+
+- **App:** Expo SDK 58 / React Native 0.88 / TypeScript strict. Routes live in `src/app/`;
+  feature code in `src/features/*`; design tokens and primitives in `src/ui`.
+- **Playback:** `expo-audio` (`AudioPlaylist`) with background playback and lock-screen controls,
+  configured through the `expo-audio` config plugin. Development builds only.
+- **Data:** every table is RLS-protected. Skip limits and demo-history seeding are `security
+  definer` RPCs, so the client cannot talk its way past them.
+- **Audio delivery:** R2 holds the CC catalog; `r2-sign` issues short-lived signed URLs. Supabase
+  Storage is the local/dev fallback.
+
+## Spotify importer, honestly
+
+The importer reads playlist **metadata** through the official Spotify Web API. It never downloads,
+streams, or re-hosts Spotify audio.
+
+Matching is four-tier and always labeled in the UI:
+
+1. **Exact** — ISRC match (or normalized title + artist + duration within tolerance).
+2. **Suggested** — trigram similarity ≥ 0.85 with duration sanity check.
+3. **Vibe match** — genre/mood enrichment via Deezer's public API, marked as a suggestion.
+4. **Placeholder** — metadata-only row you can swap later. Clearly marked, never silently faked.
+
+Expected match rates: **≥ 95%** against the curated CC catalog (it is built for this), and roughly
+**5–15%** for a typical mainstream Spotify playlist. The import screen reports the real numbers
+instead of hiding them.
+
 ## Stack
 
 Expo SDK 58 · React Native 0.88 · TypeScript strict · Expo Router · expo-audio · Zustand ·
@@ -33,11 +81,13 @@ Cloudflare R2 · GitHub Actions + EAS.
 # Node 22 LTS is required (see .node-version)
 npm.cmd install
 Copy-Item .env.example .env.local   # fill in Supabase + R2 + Spotify values
+npx.cmd supabase@latest db start    # local Postgres (Docker required)
+npx.cmd supabase@latest db reset    # apply migrations
 npm.cmd start
 ```
 
-App config: scheme `duskwave`; Spotify OAuth redirect `duskwave://redirect`.
-Testing the deep link once a dev build is installed:
+App config: scheme `duskwave`; Spotify OAuth redirect `duskwave://redirect`; Supabase auth
+callback `duskwave://auth-callback`. Testing the deep link once a dev build is installed:
 
 ```powershell
 adb shell am start -a android.intent.action.VIEW -d "duskwave://redirect?code=test&state=test"
@@ -53,7 +103,9 @@ Operator setup (Supabase, Spotify dashboard, R2, EAS) lives in [docs/runbook.md]
 | `npm.cmd run typecheck` | TypeScript |
 | `npm.cmd run lint` | ESLint |
 | `npm.cmd test` | Jest |
+| `npx.cmd supabase@latest test db` | pgTAP schema/RLS tests |
 | `npm.cmd run seed:catalog -- --dry-run` | Validate catalog manifest |
+| `npm.cmd run seed:catalog -- --verify` | Check catalog rows and audio keys |
 | `npm.cmd run seed:catalog` | Upload catalog to R2 + Supabase (idempotent) |
 
 ## Roadmap
@@ -71,4 +123,5 @@ Operator setup (Supabase, Spotify dashboard, R2, EAS) lives in [docs/runbook.md]
 
 Catalog audio is Creative Commons licensed; every track ships with license and attribution shown
 in-app. Spotify integration uses the official Web API for metadata only, with user-initiated OAuth.
-Duskwave is not affiliated with Spotify. Uploaded audio stays private to its owner.
+Duskwave is not affiliated with Spotify. Uploaded audio stays private to its owner. The demo catalog
+manifest is illustrative (`example.com` URLs) until real CC tracks are sourced.
