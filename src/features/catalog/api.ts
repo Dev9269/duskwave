@@ -284,3 +284,36 @@ export async function getMoodShelf(mood: string, limit?: number | null): Promise
   if (error) throw new Error(`Could not load the ${cleanMood} shelf: ${error.message}`);
   return mapTrackRows(client, data ?? []);
 }
+export async function getLikedTracks(): Promise<Track[]> {
+  const client = getSupabase();
+  const {
+    data: { user },
+    error: authError,
+  } = await client.auth.getUser();
+  if (authError) throw new Error(`Could not read your session: ${authError.message}`);
+  if (!user) throw new Error('Sign in to see liked songs.');
+
+  const { data: likes, error: likesError } = await client
+    .from('likes')
+    .select('track_id, created_at')
+    .eq('user_id', user.id)
+    .order('created_at', { ascending: false });
+  if (likesError) throw new Error(`Could not load liked songs: ${likesError.message}`);
+
+  const trackIds = (likes ?? []).map((row) => row.track_id);
+  if (trackIds.length === 0) return [];
+
+  const { data: rows, error: tracksError } = await client
+    .from('tracks')
+    .select('*')
+    .in('id', trackIds)
+    .eq('is_playable', true);
+  if (tracksError) throw new Error(`Could not load liked tracks: ${tracksError.message}`);
+
+  const byId = new Map((rows ?? []).map((row) => [row.id, row]));
+  const orderedRows = trackIds
+    .map((trackId) => byId.get(trackId))
+    .filter((row): row is TrackRow => row !== undefined);
+
+  return mapTrackRows(client, orderedRows);
+}

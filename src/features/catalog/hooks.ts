@@ -4,6 +4,7 @@ import {
   DEFAULT_SHELF_LIMIT,
   clampLimit,
   getFreshTracks,
+  getLikedTracks,
   getMoodShelf,
   getRecentlyPlayed,
   hasActiveSearch,
@@ -26,6 +27,7 @@ export const catalogKeys = {
     [...catalogKeys.all, 'fresh', clampLimit(limit)] as const,
   moodShelf: (mood: string, limit: number | null = DEFAULT_SHELF_LIMIT) =>
     [...catalogKeys.all, 'mood', normalizeText(mood)?.toLowerCase() ?? '', clampLimit(limit)] as const,
+  liked: () => [...catalogKeys.all, 'liked'] as const,
 };
 
 export function useSearchTracks(params: SearchTracksParams = {}) {
@@ -62,6 +64,15 @@ export function useMoodShelf(mood: string, limit: number | null = DEFAULT_SHELF_
     queryKey: catalogKeys.moodShelf(mood, pageSize),
     queryFn: () => getMoodShelf(mood, pageSize),
     enabled: normalizeText(mood) !== null,
+    staleTime: SHELF_STALE_TIME,
+  });
+}
+
+export function useLikedTracks(enabled = true) {
+  return useQuery({
+    queryKey: catalogKeys.liked(),
+    queryFn: () => getLikedTracks(),
+    enabled,
     staleTime: SHELF_STALE_TIME,
   });
 }
