@@ -317,3 +317,27 @@ export async function getLikedTracks(): Promise<Track[]> {
 
   return mapTrackRows(client, orderedRows);
 }
+
+export async function getTracksByIds(trackIds: string[]): Promise<Track[]> {
+  const ids = trackIds.filter((id): id is string => typeof id === 'string' && id.length > 0);
+  if (ids.length === 0) return [];
+
+  const client = getSupabase();
+  const { data, error } = await client
+    .from('tracks')
+    .select('*')
+    .in('id', [...new Set(ids)]);
+  if (error) throw new Error(`Could not load tracks: ${error.message}`);
+
+  const rows = data ?? [];
+  if (rows.length === 0) return [];
+
+  // Keep only playable rows for playback restore; callers can decide how to handle missing/stale IDs.
+  const playableRows = rows.filter((row) => row.is_playable);
+  const byId = new Map(playableRows.map((row) => [row.id, row]));
+  const orderedRows = ids
+    .map((id) => byId.get(id))
+    .filter((row): row is TrackRow => row !== undefined);
+
+  return mapTrackRows(client, orderedRows);
+}

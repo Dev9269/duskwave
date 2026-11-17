@@ -11,9 +11,33 @@ import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-goog
 
 import { SessionProvider, isOnboarded, useSession } from '@/features/auth/session-provider';
 import { queryClient } from '@/lib/query-client';
+import {
+  restorePersistedPlayerState,
+  startPlayerPersistence,
+  stopPlayerPersistence,
+} from '@/features/player/persistence';
 import { colors } from '@/ui';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
+
+function PlayerBootstrap() {
+  useEffect(() => {
+    let active = true;
+
+    startPlayerPersistence();
+    void restorePersistedPlayerState().catch(() => {
+      // Restore must never block app startup on errors.
+    });
+
+    return () => {
+      active = false;
+      void active; // satisfy lint for unused in some configs; cleanup runs regardless
+      stopPlayerPersistence();
+    };
+  }, []);
+
+  return null;
+}
 
 function RootNavigator() {
   const { session, profile, loading } = useSession();
@@ -72,6 +96,7 @@ export default function RootLayout() {
       <QueryClientProvider client={queryClient}>
         <SessionProvider>
           <StatusBar style="light" />
+          <PlayerBootstrap />
           <RootNavigator />
         </SessionProvider>
       </QueryClientProvider>
