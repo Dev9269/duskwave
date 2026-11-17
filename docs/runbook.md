@@ -100,10 +100,19 @@ SecureStore value) shows `state_mismatch`.
    `r2-sign` Edge Function.
 2. Create an API token scoped to the bucket (Object Read & Write).
 3. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` in `.env.local`
-   for the seed script.
+   for the seed script. The `r2-sign` function reads the same values; when any is missing it
+   falls back to signing the `uploads` Storage bucket with `SUPABASE_SERVICE_ROLE_KEY`.
 4. CORS for the bucket: allow `GET`/`HEAD` from `*` so `expo-audio` can stream signed URLs.
 5. Local fallback: the seed script can target Supabase Storage (`uploads` bucket) when R2 values
    are absent.
+
+Serve the function locally (JWT verification stays enabled — the app calls it with the
+signed-in user's session):
+
+```powershell
+npx.cmd supabase@latest functions serve r2-sign --env-file .env.local
+# http://127.0.0.1:54321/functions/v1/r2-sign
+```
 
 ## 7. Catalog seeding
 
