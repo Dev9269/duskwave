@@ -19,7 +19,7 @@ import { useSearchTracks } from '@/features/catalog/hooks';
 import { usePlayerStore } from '@/features/player/player-store';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { EmptyState, Pill, Screen, Text, TextField, TrackRow, spacing } from '@/ui';
+import { EmptyState, Pill, PlayerBar, Screen, Text, TextField, TrackRow, spacing } from '@/ui';
 
 export default function SearchScreen() {
   const { session } = useSession();
@@ -163,6 +163,9 @@ export default function SearchScreen() {
             </View>
           </View>
         ) : null}
+        <View style={styles.playerWrap}>
+          <PlayerBar />
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -180,4 +183,5 @@ const styles = StyleSheet.create({
   pillRow: { gap: spacing.sm, paddingVertical: 2 },
   results: { gap: spacing.md },
   trackList: { gap: spacing.xs },
+  playerWrap: { marginTop: spacing.md },
 });

@@ -7,7 +7,18 @@ import { TrackListSkeleton } from '@/features/catalog/components/catalog-ui';
 import { useLikedTracks } from '@/features/catalog/hooks';
 import { usePlayerStore } from '@/features/player/player-store';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { Button, Card, EmptyState, Screen, SectionHeader, Text, TrackRow, colors, spacing } from '@/ui';
+import {
+  Button,
+  Card,
+  EmptyState,
+  PlayerBar,
+  Screen,
+  SectionHeader,
+  Text,
+  TrackRow,
+  colors,
+  spacing,
+} from '@/ui';
 
 export default function LibraryScreen() {
   const { session } = useSession();
@@ -97,6 +108,9 @@ export default function LibraryScreen() {
             Free accounts get three uploads. Premium unlocks more, plus offline and crossfade.
           </Text>
         </Card>
+        <View style={styles.playerWrap}>
+          <PlayerBar />
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -123,4 +137,5 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.7 },
   placeholder: { gap: spacing.sm },
+  playerWrap: { marginTop: spacing.md },
 });

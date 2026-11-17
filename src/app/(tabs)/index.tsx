@@ -88,7 +88,6 @@ export default function HomeScreen() {
             </View>
           </>
         ) : null}
-
         <View style={styles.playerWrap}>
           <PlayerBar />
         </View>
@@ -107,5 +106,5 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md },
   brand: { letterSpacing: 4 },
   section: { gap: spacing.sm },
-  playerWrap: { marginTop: spacing.lg },
+  playerWrap: { marginTop: spacing.md },
 });

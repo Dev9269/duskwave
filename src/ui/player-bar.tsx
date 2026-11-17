@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { usePlayerStore } from '@/features/player/player-store';
 import { colors, radii, spacing } from './tokens';
@@ -94,6 +94,16 @@ const styles = StyleSheet.create({
     borderColor: colors.hairline,
     backgroundColor: colors.surfaceRaised,
     overflow: 'hidden',
+    ...Platform.select({
+      ios: {
+        shadowColor: '#000',
+        shadowOpacity: 0.18,
+        shadowRadius: 10,
+        shadowOffset: { width: 0, height: 4 },
+      },
+      android: { elevation: 4 },
+      default: {},
+    }),
   },
   pressed: { opacity: 0.92 },
   progressTrack: {

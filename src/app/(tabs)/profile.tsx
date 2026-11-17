@@ -3,7 +3,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { useSession } from '@/features/auth/session-provider';
-import { Card, Pill, Screen, Text, colors, spacing } from '@/ui';
+import { Card, Pill, PlayerBar, Screen, Text, colors, spacing } from '@/ui';
 
 export default function ProfileScreen() {
   const { profile, session } = useSession();
@@ -43,6 +43,9 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </Card>
         </Pressable>
+        <View style={styles.playerWrap}>
+          <PlayerBar />
+        </View>
       </ScrollView>
     </Screen>
   );
@@ -72,4 +75,5 @@ const styles = StyleSheet.create({
   note: { paddingHorizontal: spacing.xs },
   settingsRow: { borderRadius: 12 },
   pressed: { opacity: 0.9 },
+  playerWrap: { marginTop: spacing.md },
 });
