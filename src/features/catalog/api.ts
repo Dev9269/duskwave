@@ -87,6 +87,10 @@ export function normalizeText(value: string | null | undefined): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+export function escapeLikePattern(value: string): string {
+  return value.replace(/[\\%_]/g, (match) => `\\${match}`);
+}
+
 function normalizeBpm(value: number | null | undefined): number | null {
   if (typeof value !== 'number' || !Number.isFinite(value)) return null;
   return Math.trunc(value);
@@ -278,7 +282,7 @@ export async function getMoodShelf(mood: string, limit?: number | null): Promise
     .select('*')
     .eq('source', 'catalog')
     .eq('is_playable', true)
-    .ilike('mood', cleanMood)
+    .ilike('mood', escapeLikePattern(cleanMood))
     .order('created_at', { ascending: false })
     .limit(clampLimit(limit));
   if (error) throw new Error(`Could not load the ${cleanMood} shelf: ${error.message}`);

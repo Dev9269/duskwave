@@ -4,6 +4,7 @@ import {
   buildSearchTracksArgs,
   clampLimit,
   clampOffset,
+  escapeLikePattern,
   hasActiveSearch,
   normalizeSearchParams,
 } from '@/features/catalog/api';
@@ -117,6 +118,19 @@ describe('hasActiveSearch', () => {
     expect(hasActiveSearch({ mood: 'Chill' })).toBe(true);
     expect(hasActiveSearch({ bpmMin: 0 })).toBe(true);
     expect(hasActiveSearch({ bpmMax: 120 })).toBe(true);
+  });
+});
+
+describe('escapeLikePattern', () => {
+  it('leaves plain text untouched', () => {
+    expect(escapeLikePattern('chill')).toBe('chill');
+  });
+
+  it('escapes LIKE wildcards and backslashes', () => {
+    expect(escapeLikePattern('100%')).toBe('100\\%');
+    expect(escapeLikePattern('lo_fi')).toBe('lo\\_fi');
+    expect(escapeLikePattern('a\\b')).toBe('a\\\\b');
+    expect(escapeLikePattern('%_\\')).toBe('\\%\\_\\\\');
   });
 });
 
