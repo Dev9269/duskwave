@@ -90,6 +90,8 @@ function errorMessage(error: unknown): string {
   return 'Playback failed.';
 }
 
+let resumeInFlight = false;
+
 export const usePlayerStore = create<PlayerState>((set, get) => ({
   ...INITIAL_STATE,
   playQueue: async (tracks, startIndex, context) => {
@@ -111,7 +113,37 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
       if (pauseEngine()) set({ isPlaying: false });
       return;
     }
-    if (playEngine()) set({ isPlaying: true });
+    if (playEngine()) {
+      set({ isPlaying: true });
+      return;
+    }
+    if (resumeInFlight) return;
+    resumeInFlight = true;
+
+    const resumePositionMs = state.positionMs;
+    void (async () => {
+      try {
+        const latest = get();
+        if (latest.queue.length === 0) return;
+
+        const applied = await loadQueue(latest.queue, latest.index, {
+          autoplay: false,
+          context: latest.context,
+        });
+        if (!applied) return;
+
+        if (resumePositionMs > 0) {
+          await seekEngine(resumePositionMs / 1000);
+        }
+        if (playEngine()) {
+          set({ isPlaying: true, positionMs: resumePositionMs, error: null });
+        }
+      } catch (error) {
+        set({ error: errorMessage(error), isPlaying: false });
+      } finally {
+        resumeInFlight = false;
+      }
+    })();
   },
   next: () => {
     const state = get();

@@ -290,6 +290,71 @@ describe('transport controls', () => {
   });
 });
 
+describe('restored queue resume', () => {
+  function seedRestoredQueue(positionMs: number) {
+    usePlayerStore.setState({
+      queue: tracks,
+      index: 1,
+      context: 'liked',
+      positionMs,
+      durationMs: 180_000,
+      currentTrack: tracks[1],
+      isPlaying: false,
+      error: null,
+    });
+  }
+
+  function flushAsyncWork() {
+    return new Promise((resolve) => setTimeout(resolve, 0));
+  }
+
+  it('primes the engine at the saved index and position before playing', async () => {
+    seedRestoredQueue(42_500);
+    expect(getAudioMock().playlists).toEqual([]);
+
+    usePlayerStore.getState().toggle();
+    await flushAsyncWork();
+
+    const playlist = latestPlaylist();
+    const state = usePlayerStore.getState();
+
+    expect(state.isPlaying).toBe(true);
+    expect(state.positionMs).toBe(42_500);
+    expect(resolveAudioUrlMock).toHaveBeenCalledTimes(tracks.length);
+    expect(playlist.sources).toEqual(tracks.map(sourceFor));
+    expect(playlist.currentIndex).toBe(1);
+    expect(playlist.calls.seekTo).toEqual([42.5]);
+    expect(playlist.playing).toBe(true);
+    expect(playlist.lockScreen?.metadata).toMatchObject({ title: 'Track b' });
+  });
+
+  it('resumes from the start without seeking when the saved position is zero', async () => {
+    seedRestoredQueue(0);
+
+    usePlayerStore.getState().toggle();
+    await flushAsyncWork();
+
+    const playlist = latestPlaylist();
+
+    expect(usePlayerStore.getState().isPlaying).toBe(true);
+    expect(playlist.calls.seekTo).toEqual([]);
+    expect(playlist.playing).toBe(true);
+  });
+
+  it('keeps the queue paused when the resumed track fails to resolve', async () => {
+    seedRestoredQueue(10_000);
+    resolveAudioUrlMock.mockRejectedValueOnce(new Error('offline'));
+
+    usePlayerStore.getState().toggle();
+    await flushAsyncWork();
+
+    const state = usePlayerStore.getState();
+    expect(state.isPlaying).toBe(false);
+    expect(state.error).toBe('offline');
+    expect(getAudioMock().playlists).toEqual([]);
+  });
+});
+
 describe('queue updates', () => {
   it('appends a source-resolved track while keeping the current track', async () => {
     await usePlayerStore.getState().playQueue([tracks[0]], 0, 'search');
