@@ -9,6 +9,7 @@ import {
   type CatalogTrack,
 } from '../src/types/catalog-manifest';
 import type { Database } from '../src/types/database';
+import { parsePositiveInt } from './lib/args';
 
 loadEnv({ path: ['.env.local', '.env'], quiet: true });
 
@@ -47,12 +48,7 @@ function parseArgs(argv: string[]): Options {
     } else if (arg === '--verify') {
       options.verify = true;
     } else if (arg === '--limit') {
-      const raw = argv[index + 1];
-      const parsed = Number.parseInt(raw ?? '', 10);
-      if (!Number.isInteger(parsed) || parsed <= 0) {
-        throw new Error('--limit expects a positive integer.');
-      }
-      options.limit = parsed;
+      options.limit = parsePositiveInt(argv[index + 1], '--limit');
       index += 1;
     } else if (arg.startsWith('--file=')) {
       options.file = arg.slice('--file='.length);

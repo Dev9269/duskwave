@@ -8,6 +8,7 @@ import {
   type CatalogTrack,
 } from '../src/types/catalog-manifest';
 import { dedupeTracksBySlug, mapJamendoTrack } from '../src/features/catalog/jamendo';
+import { parsePositiveInt } from './lib/args';
 
 loadEnv({ path: ['.env.local', '.env'], quiet: true });
 
@@ -40,11 +41,7 @@ function parseArgs(argv: string[]): Options {
     if (arg === '--limit' || arg.startsWith('--limit=')) {
       const raw = arg === '--limit' ? argv[index + 1] : arg.slice('--limit='.length);
       if (arg === '--limit') index += 1;
-      const parsed = Number.parseInt(raw ?? '', 10);
-      if (!Number.isInteger(parsed) || parsed <= 0) {
-        throw new Error('--limit expects a positive integer.');
-      }
-      options.limit = parsed;
+      options.limit = parsePositiveInt(raw, '--limit');
     } else if (arg === '--out' || arg.startsWith('--out=')) {
       const value = arg === '--out' ? argv[index + 1] : arg.slice('--out='.length);
       if (arg === '--out') index += 1;
