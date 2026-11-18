@@ -1,6 +1,7 @@
 import type { Track } from '@/features/catalog/api';
 
 export const AUDIO_URL_TTL_SECONDS = 3600;
+export const AUDIO_URL_CACHE_LIMIT = 200;
 const EXPIRY_SAFETY_SECONDS = 60;
 
 export type AudioTrackInput = Pick<Track, 'audioKey' | 'audioUrl'>;
@@ -14,6 +15,7 @@ export type AudioUrlResolverDeps = {
   invoke: (key: string) => Promise<SignedAudioUrl>;
   createSignedUrl: (key: string, expiresIn: number) => Promise<string>;
   now?: () => number;
+  maxCacheEntries?: number;
 };
 
 export type AudioUrlResolver = ((track: AudioTrackInput) => Promise<string>) & {
@@ -88,9 +90,28 @@ export function createAudioUrlResolver({
   invoke,
   createSignedUrl,
   now = Date.now,
+  maxCacheEntries = AUDIO_URL_CACHE_LIMIT,
 }: AudioUrlResolverDeps): AudioUrlResolver {
   const cache = new Map<string, CacheEntry>();
   const inFlight = new Map<string, Promise<string>>();
+  const limit = Number.isFinite(maxCacheEntries)
+    ? Math.max(1, Math.floor(maxCacheEntries))
+    : AUDIO_URL_CACHE_LIMIT;
+
+  function storeCacheEntry(key: string, entry: CacheEntry): void {
+    cache.delete(key);
+    cache.set(key, entry);
+    while (cache.size > limit) {
+      const oldestKey = cache.keys().next().value;
+      if (oldestKey === undefined) break;
+      cache.delete(oldestKey);
+    }
+  }
+
+  function touchCacheEntry(key: string, entry: CacheEntry): void {
+    cache.delete(key);
+    cache.set(key, entry);
+  }
 
   async function fetchSignedUrl(key: string): Promise<string> {
     let signed: SignedAudioUrl;
@@ -110,7 +131,7 @@ export function createAudioUrlResolver({
 
     const ttlMs = (signed.expiresIn - EXPIRY_SAFETY_SECONDS) * 1000;
     if (ttlMs > 0) {
-      cache.set(key, { url: signed.url, expiresAt: now() + ttlMs });
+      storeCacheEntry(key, { url: signed.url, expiresAt: now() + ttlMs });
     }
     return signed.url;
   }
@@ -122,7 +143,10 @@ export function createAudioUrlResolver({
 
     const key = normalizeKey(track.audioKey);
     const cached = cache.get(key);
-    if (cached && now() < cached.expiresAt) return cached.url;
+    if (cached && now() < cached.expiresAt) {
+      touchCacheEntry(key, cached);
+      return cached.url;
+    }
     if (cached) cache.delete(key);
 
     const pending = inFlight.get(key);

@@ -203,6 +203,41 @@ describe('resolveAudioUrl', () => {
     expect(invoke).not.toHaveBeenCalled();
   });
 
+  it('evicts the least recently used URL when the cache is full', async () => {
+    const invoke = jest
+      .fn()
+      .mockImplementation((key: string) =>
+        Promise.resolve({ url: `https://r2.example/${key}`, expiresIn: 3600 }),
+      );
+    const { resolver } = createHarness({ invoke, maxCacheEntries: 2 });
+
+    await resolver(track('catalog/a.mp3'));
+    await resolver(track('catalog/b.mp3'));
+    await resolver(track('catalog/a.mp3'));
+    await resolver(track('catalog/c.mp3'));
+
+    await expect(resolver(track('catalog/a.mp3'))).resolves.toBe('https://r2.example/catalog/a.mp3');
+    expect(invoke).toHaveBeenCalledTimes(3);
+
+    await resolver(track('catalog/b.mp3'));
+    expect(invoke).toHaveBeenCalledTimes(4);
+  });
+
+  it('keeps at least one cached entry when the configured limit is not positive', async () => {
+    const invoke = jest
+      .fn()
+      .mockImplementation((key: string) =>
+        Promise.resolve({ url: `https://r2.example/${key}`, expiresIn: 3600 }),
+      );
+    const { resolver } = createHarness({ invoke, maxCacheEntries: 0 });
+
+    await resolver(track('catalog/a.mp3'));
+    await resolver(track('catalog/b.mp3'));
+    await resolver(track('catalog/a.mp3'));
+
+    expect(invoke).toHaveBeenCalledTimes(3);
+  });
+
   it('clears the cache when reset', async () => {
     const invoke = jest
       .fn()
