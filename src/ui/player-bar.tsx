@@ -1,7 +1,8 @@
 import { Image } from 'expo-image';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { Platform, Pressable, StyleSheet, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Animated, Easing, Platform, Pressable, StyleSheet, View } from 'react-native';
 
 import { usePlayerStore } from '@/features/player/player-store';
 import { colors, radii, spacing } from './tokens';
@@ -11,6 +12,21 @@ export function PlayerBar() {
   const { queue, currentTrack, isPlaying, positionMs, durationMs, toggle, next } = usePlayerStore();
   const isEmpty = queue.length === 0;
   const canControl = !isEmpty;
+  const [appear] = useState(() => new Animated.Value(0));
+
+  useEffect(() => {
+    if (isEmpty) return;
+
+    appear.setValue(0);
+    const animation = Animated.timing(appear, {
+      toValue: 1,
+      duration: 220,
+      easing: Easing.out(Easing.quad),
+      useNativeDriver: true,
+    });
+    animation.start();
+    return () => animation.stop();
+  }, [appear, isEmpty]);
 
   const progress =
     durationMs > 0 ? Math.min(Math.max(positionMs / durationMs, 0), 1) : 0;
@@ -22,13 +38,23 @@ export function PlayerBar() {
   if (isEmpty) return null;
 
   return (
-    <Pressable
-      accessibilityRole="button"
-      accessibilityLabel={isEmpty ? 'No track playing' : `Now playing ${currentTrack?.title ?? 'track'}`}
-      disabled={isEmpty}
-      onPress={openPlayer}
-      style={({ pressed }) => [styles.wrapper, pressed && !isEmpty && styles.pressed]}
+    <Animated.View
+      style={{
+        opacity: appear,
+        transform: [
+          {
+            translateY: appear.interpolate({ inputRange: [0, 1], outputRange: [12, 0] }),
+          },
+        ],
+      }}
     >
+      <Pressable
+        accessibilityRole="button"
+        accessibilityLabel={isEmpty ? 'No track playing' : `Now playing ${currentTrack?.title ?? 'track'}`}
+        disabled={isEmpty}
+        onPress={openPlayer}
+        style={({ pressed }) => [styles.wrapper, pressed && !isEmpty && styles.pressed]}
+      >
       <View style={styles.progressTrack} pointerEvents="none">
         <View style={[styles.progressFill, { width: `${progress * 100}%` }]} />
       </View>
@@ -85,11 +111,29 @@ export function PlayerBar() {
           </Pressable>
         </View>
       </View>
-    </Pressable>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
+export function PlayerDock() {
+  const hasQueue = usePlayerStore((state) => state.queue.length > 0);
+
+  if (!hasQueue) return null;
+
+  return (
+    <View style={styles.dock}>
+      <PlayerBar />
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
+  dock: {
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.sm,
+    backgroundColor: colors.ink,
+  },
   wrapper: {
     borderRadius: radii.md,
     borderWidth: 1,

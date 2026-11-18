@@ -3,18 +3,15 @@ import { Ionicons } from '@expo/vector-icons';
 import { router } from 'expo-router';
 
 import { useSession } from '@/features/auth/session-provider';
-import { Card, Pill, PlayerBar, Screen, Text, colors, spacing } from '@/ui';
-
-import { usePlayerStore } from '@/features/player/player-store';
+import { Card, Pill, PlayerDock, Screen, Text, colors, spacing } from '@/ui';
 
 export default function ProfileScreen() {
   const { profile, session } = useSession();
-  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const initial = (profile?.display_name || profile?.username || 'D').slice(0, 1).toUpperCase();
 
   return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen padded={false} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.identity}>
           <View style={styles.avatar}>
             <Text variant="display">{initial}</Text>
@@ -46,17 +43,14 @@ export default function ProfileScreen() {
             <Ionicons name="chevron-forward" size={18} color={colors.textFaint} />
           </Card>
         </Pressable>
-        {hasQueue ? (
-          <View style={styles.playerWrap}>
-            <PlayerBar />
-          </View>
-        ) : null}
       </ScrollView>
+      <PlayerDock />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xxl,
@@ -80,5 +74,4 @@ const styles = StyleSheet.create({
   note: { paddingHorizontal: spacing.xs },
   settingsRow: { borderRadius: 12 },
   pressed: { opacity: 0.9 },
-  playerWrap: { marginTop: spacing.md },
 });

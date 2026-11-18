@@ -7,14 +7,13 @@ import { useFreshTracks, useMoodShelf, useRecentlyPlayed } from '@/features/cata
 import { usePlayerStore } from '@/features/player/player-store';
 import { greeting } from '@/lib/greeting';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { Button, EmptyState, PlayerBar, Screen, SectionHeader, Text, spacing } from '@/ui';
+import { Button, EmptyState, PlayerDock, Screen, SectionHeader, Text, spacing } from '@/ui';
 
 const HOME_MOOD = 'chill';
 
 export default function HomeScreen() {
   const { profile, session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
-  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const firstName = profile?.display_name?.split(' ')[0] || 'listener';
   const enabled = isSupabaseConfigured && !!session;
 
@@ -23,8 +22,8 @@ export default function HomeScreen() {
   const moodShelf = useMoodShelf(HOME_MOOD, 10);
 
   return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen padded={false} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text variant="caption" accent style={styles.brand}>
             DUSKWAVE
@@ -89,17 +88,14 @@ export default function HomeScreen() {
             </View>
           </>
         ) : null}
-        {hasQueue ? (
-          <View style={styles.playerWrap}>
-            <PlayerBar />
-          </View>
-        ) : null}
       </ScrollView>
+      <PlayerDock />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xxl,
@@ -109,5 +105,4 @@ const styles = StyleSheet.create({
   header: { gap: spacing.md },
   brand: { letterSpacing: 4 },
   section: { gap: spacing.sm },
-  playerWrap: { marginTop: spacing.md },
 });

@@ -19,12 +19,11 @@ import { useSearchTracks } from '@/features/catalog/hooks';
 import { usePlayerStore } from '@/features/player/player-store';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { EmptyState, Pill, PlayerBar, Screen, Text, TextField, TrackRow, spacing } from '@/ui';
+import { EmptyState, Pill, PlayerDock, Screen, Text, TextField, TrackRow, spacing } from '@/ui';
 
 export default function SearchScreen() {
   const { session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
-  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilterState>(DEFAULT_SEARCH_FILTERS);
   const debouncedQuery = useDebouncedValue(query, 300);
@@ -47,8 +46,8 @@ export default function SearchScreen() {
     (search.data?.length ?? 0) === 0;
 
   return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen padded={false} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text variant="title">Search</Text>
           <Text muted>Tracks, moods, and BPM from the Duskwave catalog.</Text>
@@ -164,17 +163,14 @@ export default function SearchScreen() {
             </View>
           </View>
         ) : null}
-        {hasQueue ? (
-          <View style={styles.playerWrap}>
-            <PlayerBar />
-          </View>
-        ) : null}
       </ScrollView>
+      <PlayerDock />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xxl,
@@ -186,5 +182,4 @@ const styles = StyleSheet.create({
   pillRow: { gap: spacing.sm, paddingVertical: 2 },
   results: { gap: spacing.md },
   trackList: { gap: spacing.xs },
-  playerWrap: { marginTop: spacing.md },
 });

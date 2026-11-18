@@ -11,7 +11,7 @@ import {
   Button,
   Card,
   EmptyState,
-  PlayerBar,
+  PlayerDock,
   Screen,
   SectionHeader,
   Text,
@@ -23,14 +23,13 @@ import {
 export default function LibraryScreen() {
   const { session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
-  const hasQueue = usePlayerStore((s) => s.queue.length > 0);
   const enabled = isSupabaseConfigured && !!session;
   const liked = useLikedTracks(enabled);
   const likedTracks = liked.data ?? [];
 
   return (
-    <Screen padded={false}>
-      <ScrollView contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+    <Screen padded={false} edges={['top']}>
+      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
           <Text variant="title">Your library</Text>
           <Text muted>Songs you keep, playlists you build, and the people you blend with.</Text>
@@ -109,17 +108,14 @@ export default function LibraryScreen() {
             Free accounts get three uploads. Premium unlocks more, plus offline and crossfade.
           </Text>
         </Card>
-        {hasQueue ? (
-          <View style={styles.playerWrap}>
-            <PlayerBar />
-          </View>
-        ) : null}
       </ScrollView>
+      <PlayerDock />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  scroll: { flex: 1 },
   content: {
     paddingHorizontal: spacing.lg,
     paddingTop: spacing.xxl,
@@ -140,5 +136,4 @@ const styles = StyleSheet.create({
   },
   disabled: { opacity: 0.7 },
   placeholder: { gap: spacing.sm },
-  playerWrap: { marginTop: spacing.md },
 });

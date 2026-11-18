@@ -10,6 +10,7 @@ export default function TabsLayout() {
       screenOptions={{
         headerShown: false,
         sceneStyle: { backgroundColor: colors.ink },
+        tabBarHideOnKeyboard: true,
         tabBarStyle: styles.bar,
         tabBarActiveTintColor: colors.accent,
         tabBarInactiveTintColor: colors.textFaint,
