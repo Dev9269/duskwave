@@ -9,13 +9,14 @@
   },
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
     "web": "expo start --web",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "jest",
     "format": "prettier --write .",
+    "fetch:catalog": "tsx scripts/fetch-catalog.ts",
     "seed:catalog": "tsx scripts/seed-catalog.ts"
   },
   "dependencies": {
@@ -24,6 +25,7 @@
     "@expo/ui": "~58.0.28",
     "@expo/vector-icons": "^15.0.2",
     "@react-native-async-storage/async-storage": "2.2.0",
+    "@react-native-community/slider": "5.2.1",
     "@supabase/supabase-js": "^2.119.0",
     "@tanstack/react-query": "^5.107.1",
     "expo": "~58.0.25",

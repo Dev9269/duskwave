@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import {
   ActivityIndicator,
   Pressable,
@@ -6,7 +7,7 @@ import {
   type ViewStyle,
 } from 'react-native';
 
-import { colors, radii, spacing } from '../tokens';
+import { colors, fontFamily, radii, spacing } from '../tokens';
 import { Text } from './text';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
@@ -18,6 +19,7 @@ export type ButtonProps = Omit<PressableProps, 'children'> & {
   size?: Size;
   loading?: boolean;
   fullWidth?: boolean;
+  icon?: ReactNode;
   style?: ViewStyle;
 };
 
@@ -27,6 +29,7 @@ export function Button({
   size = 'md',
   loading,
   fullWidth,
+  icon,
   disabled,
   style,
   ...props
@@ -49,15 +52,24 @@ export function Button({
       {...props}
     >
       {loading ? (
-        <ActivityIndicator color={variant === 'primary' ? colors.ink : colors.text} />
+        <ActivityIndicator
+          color={variant === 'primary' || variant === 'danger' ? colors.ink : colors.text}
+        />
       ) : (
-        <Text
-          variant="label"
-          style={variant === 'primary' ? styles.primaryLabel : undefined}
-          numberOfLines={1}
-        >
-          {label}
-        </Text>
+        <>
+          {icon}
+          <Text
+            variant="label"
+            style={[
+              styles.baseLabel,
+              variant === 'primary' && styles.primaryLabel,
+              variant === 'danger' && styles.dangerLabel,
+            ]}
+            numberOfLines={1}
+          >
+            {label}
+          </Text>
+        </>
       )}
     </Pressable>
   );
@@ -65,8 +77,8 @@ export function Button({
 
 const styles = StyleSheet.create({
   base: {
-    minHeight: 44,
-    paddingHorizontal: spacing.xl,
+    minHeight: 48,
+    paddingHorizontal: spacing.xxl,
     paddingVertical: spacing.md,
     borderRadius: radii.pill,
     alignItems: 'center',
@@ -76,14 +88,20 @@ const styles = StyleSheet.create({
   },
   large: { minHeight: 52, paddingHorizontal: spacing.xxl },
   fullWidth: { alignSelf: 'stretch' },
-  pressed: { opacity: 0.85 },
-  disabled: { opacity: 0.45 },
+  pressed: { opacity: 0.8 },
+  disabled: { opacity: 0.4 },
+  baseLabel: { fontFamily: fontFamily.bodyBold, letterSpacing: 0.2 },
   primaryLabel: { color: colors.ink },
+  dangerLabel: { color: colors.ink },
 });
 
 const variantStyles = StyleSheet.create({
   primary: { backgroundColor: colors.accent },
-  secondary: { backgroundColor: colors.surfaceRaised, borderWidth: 1, borderColor: colors.hairline },
+  secondary: {
+    backgroundColor: colors.transparent,
+    borderWidth: 1,
+    borderColor: colors.textMuted,
+  },
   ghost: { backgroundColor: colors.transparent },
   danger: { backgroundColor: colors.danger },
 });

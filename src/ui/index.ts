@@ -2,7 +2,7 @@ export { Button } from './primitives/button';
 export { Card } from './primitives/card';
 export { EmptyState } from './primitives/empty-state';
 export { Pill } from './primitives/pill';
-export { PlayerBar } from './player-bar';
+export { PlayerBar, PlayerDock } from './player-bar';
 export { Screen } from './primitives/screen';
 export { SectionHeader } from './primitives/section-header';
 export { Skeleton } from './primitives/skeleton';

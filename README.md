@@ -111,7 +111,7 @@ Operator setup (Supabase, Spotify dashboard, R2, EAS) lives in [docs/runbook.md]
 ## Roadmap
 
 - [x] M0 — Foundation: repo, CI, auth, design system, tab shell, deep links, DB baseline, seeder
-- [ ] M1 — Catalog + playback
+- [x] M1 — Catalog + playback (local implementation complete; real Jamendo seed/device QA/push/CI operator-gated pending)
 - [ ] M2 — Playlists + uploads
 - [ ] M3 — Spotify importer
 - [ ] M4 — Jam

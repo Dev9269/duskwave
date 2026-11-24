@@ -18,12 +18,10 @@ export function Card({ padded = true, raised, style, ...props }: CardProps) {
 
 const styles = StyleSheet.create({
   base: {
-    backgroundColor: colors.surface,
+    backgroundColor: colors.surfaceRaised,
     borderRadius: radii.md,
-    borderWidth: 1,
-    borderColor: colors.hairline,
     overflow: 'hidden',
   },
   padded: { padding: spacing.lg },
-  raised: { backgroundColor: colors.surfaceRaised },
+  raised: { backgroundColor: colors.elevated },
 });

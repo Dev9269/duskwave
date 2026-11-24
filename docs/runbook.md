@@ -100,12 +100,45 @@ SecureStore value) shows `state_mismatch`.
    `r2-sign` Edge Function.
 2. Create an API token scoped to the bucket (Object Read & Write).
 3. Set `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET` in `.env.local`
-   for the seed script.
+   for the seed script. The `r2-sign` function reads the same values; when any is missing it
+   falls back to signing the `uploads` Storage bucket with `SUPABASE_SERVICE_ROLE_KEY`.
 4. CORS for the bucket: allow `GET`/`HEAD` from `*` so `expo-audio` can stream signed URLs.
 5. Local fallback: the seed script can target Supabase Storage (`uploads` bucket) when R2 values
    are absent.
 
+Serve the function locally (JWT verification stays enabled — the app calls it with the
+signed-in user's session):
+
+```powershell
+npx.cmd supabase@latest functions serve r2-sign --env-file .env.local
+# http://127.0.0.1:54321/functions/v1/r2-sign
+```
+
+
+### Playback, scrobbles, and resume
+
+- Scrobbles are recorded in public.plays with incremental ms_played updates and server-side clamping to track duration. Progress flushes every 10 s while playing, on pause/track change/finish, and pending entries are buffered in AsyncStorage offline then flushed on next launch/bootstrap.
+- The player restores the last queue paused on launch (track IDs, index, position, context), drops stale/unplayable IDs, clamps bounds, and never autoplays. Saves occur on pause/background and every 30 s while playing.
+- Native lock-screen/background playback and notification controls require a development/production build (not Expo Go); device verification of 5+ minute background playback and plays updates remains operator-gated (R8).
+
 ## 7. Catalog seeding
+
+1. Create a free Jamendo developer account at https://devportal.jamendo.com, register an app,
+   and copy its Client ID. Put it in `.env.local` as `JAMENDO_CLIENT_ID` (server-side only —
+   never expose it to the app bundle).
+2. Fetch a licensed catalog. The fetcher requests MP3 audio from
+   `https://api.jamendo.com/v3.0/tracks/` and skips tracks missing a playable MP3, positive
+   duration, artwork, or Creative Commons license URL. It validates the manifest with
+   `CatalogManifestSchema` before writing and logs fetched, mapped, skipped, and duplicate counts.
+
+```powershell
+npm.cmd run fetch:catalog
+npm.cmd run fetch:catalog -- --limit 50 --out catalog/manifest.json
+```
+
+`--limit` defaults to 200 (Jamendo records fetched); `--out` defaults to `catalog/manifest.json`.
+
+3. Seed the manifest:
 
 ```powershell
 npm.cmd run seed:catalog -- --dry-run
@@ -114,9 +147,9 @@ npm.cmd run seed:catalog -- --force
 npm.cmd run seed:catalog -- --verify
 ```
 
-The script is idempotent: tracks are keyed by slug, artists by name. `--dry-run` prints the plan
-without writing. `--verify` re-reads the catalog and reports audio-key gaps. The manifest lives
-in `scripts/catalog-manifest.json`; audio licenses stay attached to every track row.
+The seed script is idempotent: tracks are keyed by slug, artists by name. `--dry-run` prints the
+plan without writing. `--verify` re-reads the catalog and reports audio-key gaps. The manifest
+lives in `catalog/manifest.json`; audio licenses stay attached to every track row.
 
 Demo history for a signed-in account: Settings → "Load demo history" (calls
 `seed_demo_history()`; one-shot per profile).

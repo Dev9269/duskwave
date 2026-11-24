@@ -435,6 +435,18 @@ export interface Database {
     Functions: {
       seed_demo_history: { Args: Record<string, never>; Returns: number };
       consume_skip: { Args: Record<string, never>; Returns: boolean };
+      search_tracks: {
+        Args: {
+          q?: string | null;
+          genre?: string | null;
+          mood?: string | null;
+          bpm_min?: number | null;
+          bpm_max?: number | null;
+          lim?: number | null;
+          off?: number | null;
+        };
+        Returns: Database['public']['Tables']['tracks']['Row'][];
+      };
     };
     Enums: {
       user_tier: UserTier;

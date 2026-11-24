@@ -7,6 +7,12 @@ export function friendlyAuthError(message: string): string {
   if (lower.includes('already registered') || lower.includes('already been registered')) {
     return 'An account with this email already exists. Try signing in.';
   }
+  if (lower.includes('signups not allowed')) {
+    return 'No account found for that email. Sign up first.';
+  }
+  if (lower.includes('email not confirmed')) {
+    return 'Confirm your email first, then sign in.';
+  }
   if (lower.includes('rate limit') || lower.includes('too many')) {
     return 'Too many attempts. Wait a minute and try again.';
   }
