@@ -8,6 +8,7 @@ import {
   __resetScrobbleStateForTests,
   flushPendingScrobbles,
   isCompleted,
+  isScrobbleableTrack,
   onAppBackground,
   onPause,
   onPlaybackProgress,
@@ -38,7 +39,11 @@ jest.mock('react-native', () => {
   };
 });
 
-function makeTrack(id = 'track-1', durationMs = 200_000): Track {
+function makeTrack(
+  id = 'track-1',
+  durationMs = 200_000,
+  source: Track['source'] = 'catalog',
+): Track {
   return {
     id,
     slug: id,
@@ -53,7 +58,7 @@ function makeTrack(id = 'track-1', durationMs = 200_000): Track {
     license: null,
     licenseUrl: null,
     attribution: null,
-    source: 'catalog',
+    source,
     isPlayable: true,
     audioUrl: null,
     audioKey: `catalog/${id}.mp3`,
@@ -134,6 +139,28 @@ describe('isCompleted', () => {
     expect(isCompleted(0, 0)).toBe(false);
     expect(isCompleted(30_000, -1)).toBe(true);
     expect(isCompleted(10_000, Number.NaN)).toBe(false);
+  });
+});
+
+describe('scrobble eligibility', () => {
+  it('marks catalog tracks scrobbleable and Audius tracks not scrobbleable', () => {
+    expect(isScrobbleableTrack({ source: 'catalog' })).toBe(true);
+    expect(isScrobbleableTrack({ source: 'audius' })).toBe(false);
+  });
+
+  it('finalizes the catalog track but inserts no row for an Audius track', async () => {
+    const { client, insert } = createClient();
+    getSupabaseMock.mockReturnValue(client as never);
+
+    await startScrobble(makeTrack('catalog-1', 200_000, 'catalog'), 'history');
+    await startScrobble(makeTrack('audius:YmJWK', 200_000, 'audius'), 'search');
+    await onPlaybackProgress(60_000, 200_000);
+
+    expect(insert).toHaveBeenCalledTimes(1);
+    expect(insert).toHaveBeenCalledWith(expect.objectContaining({ track_id: 'catalog-1' }));
+    expect(insert).not.toHaveBeenCalledWith(
+      expect.objectContaining({ track_id: 'audius:YmJWK' }),
+    );
   });
 });
 

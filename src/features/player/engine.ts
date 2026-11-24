@@ -15,6 +15,7 @@ import {
   onPlaybackProgress as onScrobbleProgress,
   onTrackChange as onScrobbleTrackChange,
   onTrackFinished as onScrobbleTrackFinished,
+  isScrobbleableTrack,
   startScrobble,
   type PlayContext,
 } from './scrobble';
@@ -167,6 +168,10 @@ let scrobbleIndex: number | null = null;
 
 function beginScrobble(track: Track | undefined, index: number): void {
   if (!track) return;
+  if (!isScrobbleableTrack(track)) {
+    scrobbleIndex = null;
+    return;
+  }
   scrobbleIndex = index;
   void startScrobble(track, loadedContext);
 }
@@ -196,14 +201,31 @@ function handleTrackChanged(trackChange: TrackChange): void {
   beginScrobble(loadedTracks[currentIndex], currentIndex);
 }
 
-function ensurePlaylist(): AudioPlaylist {
-  if (playlist) return playlist;
-
-  const created = createAudioPlaylist();
+function attachPlaylist(created: AudioPlaylist): AudioPlaylist {
   created.addListener('playlistStatusUpdate', handleStatus);
   created.addListener('trackChanged', handleTrackChanged);
   playlist = created;
   return created;
+}
+
+function ensurePlaylist(): AudioPlaylist {
+  if (playlist) return playlist;
+  return attachPlaylist(createAudioPlaylist());
+}
+
+function replacePlaylist(sources: string[]): AudioPlaylist {
+  const previous = playlist;
+  playlist = null;
+  if (previous) {
+    try {
+      previous.removeListener('playlistStatusUpdate', handleStatus);
+      previous.removeListener('trackChanged', handleTrackChanged);
+      previous.destroy();
+    } catch (error) {
+      reportError(error);
+    }
+  }
+  return attachPlaylist(createAudioPlaylist({ sources }));
 }
 
 export function setEngineHandlers(nextHandlers: EngineHandlers): void {
@@ -261,9 +283,7 @@ export async function loadQueue(
     await ensureAudioMode();
     if (token !== generation) return false;
 
-    const target = ensurePlaylist();
-    target.clear();
-    for (const source of sources) target.add(source);
+    const target = replacePlaylist(sources);
 
     loadedTracks = [...tracks];
     const requestedIndex = pendingSkipIndex ?? startIndex;
@@ -289,10 +309,10 @@ export async function loadQueue(
     loading = false;
     loadedTracks = [];
     currentIndex = 0;
-    if (active) {
+    if (playlist) {
       try {
-        active.pause();
-        active.clear();
+        playlist.pause();
+        playlist.clear();
       } catch (cleanupError) {
         reportError(cleanupError);
       }

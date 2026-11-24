@@ -1,16 +1,17 @@
 export const colors = {
-  ink: '#0B0B0F',
-  surface: '#14141A',
-  surfaceRaised: '#1B1B22',
-  hairline: '#23232B',
-  text: '#F4F1EA',
-  textMuted: '#9A97A3',
-  textFaint: '#6B6875',
-  accent: '#E4A853',
-  accentMuted: '#8A6530',
-  success: '#4FA77B',
-  danger: '#D96565',
-  overlay: 'rgba(5, 5, 8, 0.72)',
+  ink: '#000000',
+  surface: '#121212',
+  surfaceRaised: '#1F1F1F',
+  elevated: '#242424',
+  hairline: '#2A2A2A',
+  text: '#FFFFFF',
+  textMuted: '#B3B3B3',
+  textFaint: '#7A7A7A',
+  accent: '#1DB954',
+  accentMuted: '#14833B',
+  success: '#1DB954',
+  danger: '#F15E6C',
+  overlay: 'rgba(0, 0, 0, 0.7)',
   transparent: 'transparent',
 } as const;
 
@@ -25,24 +26,40 @@ export const spacing = {
 } as const;
 
 export const radii = {
-  sm: 8,
-  md: 12,
-  lg: 24,
+  sm: 4,
+  md: 8,
+  lg: 12,
   pill: 999,
 } as const;
 
 export const fontFamily = {
-  display: 'Fraunces_600SemiBold',
-  displayBold: 'Fraunces_700Bold',
+  display: 'Inter_700Bold',
+  displayBold: 'Inter_700Bold',
   body: 'Inter_400Regular',
   bodyMedium: 'Inter_500Medium',
   bodySemibold: 'Inter_600SemiBold',
+  bodyBold: 'Inter_700Bold',
 } as const;
 
 export const typeScale = {
-  display: { fontSize: 40, lineHeight: 44, fontFamily: fontFamily.displayBold },
-  title: { fontSize: 24, lineHeight: 30, fontFamily: fontFamily.display },
-  heading: { fontSize: 18, lineHeight: 24, fontFamily: fontFamily.bodySemibold },
+  display: {
+    fontSize: 32,
+    lineHeight: 38,
+    fontFamily: fontFamily.displayBold,
+    letterSpacing: -1,
+  },
+  title: {
+    fontSize: 24,
+    lineHeight: 29,
+    fontFamily: fontFamily.displayBold,
+    letterSpacing: -0.6,
+  },
+  heading: {
+    fontSize: 20,
+    lineHeight: 26,
+    fontFamily: fontFamily.displayBold,
+    letterSpacing: -0.3,
+  },
   body: { fontSize: 16, lineHeight: 24, fontFamily: fontFamily.body },
   bodyMedium: { fontSize: 16, lineHeight: 24, fontFamily: fontFamily.bodyMedium },
   caption: { fontSize: 12, lineHeight: 16, fontFamily: fontFamily.body },

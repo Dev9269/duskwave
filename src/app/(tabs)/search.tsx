@@ -1,31 +1,53 @@
+import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/features/auth/session-provider';
-import { hasActiveSearch } from '@/features/catalog/api';
+import { hasActiveSearch, normalizeText } from '@/features/catalog/api';
+import {
+  AUDIUS_MIN_QUERY_LENGTH,
+  mergeSearchResults,
+} from '@/features/catalog/audius';
+import { TrackListSkeleton } from '@/features/catalog/components/catalog-ui';
+import {
+  BrowseAll,
+  SearchField,
+  SearchFilterChips,
+  SourceFilterChips,
+} from '@/features/catalog/components/search-browse';
 import {
   DEFAULT_SEARCH_FILTERS,
-  SEARCH_BPM_RANGES,
-  SEARCH_GENRES,
-  SEARCH_MOODS,
+  DEFAULT_SEARCH_SOURCE,
   buildSearchParams,
   hasSearchIntent,
-  selectBpmRange,
-  toggleChipValue,
+  isFilterActive,
+  type BrowseCategory,
   type SearchFilterState,
+  type SearchSource,
 } from '@/features/catalog/components/search-ui';
-import { FilterPills, TrackListSkeleton } from '@/features/catalog/components/catalog-ui';
-import { useSearchTracks } from '@/features/catalog/hooks';
+import { useAudiusSearch, useSearchTracks } from '@/features/catalog/hooks';
 import { usePlayerStore } from '@/features/player/player-store';
 import { useDebouncedValue } from '@/lib/use-debounced-value';
 import { isSupabaseConfigured } from '@/lib/supabase';
-import { EmptyState, Pill, PlayerDock, Screen, Text, TextField, TrackRow, spacing } from '@/ui';
+import {
+  Button,
+  EmptyState,
+  PlayerDock,
+  Screen,
+  Text,
+  TrackRow,
+  colors,
+  radii,
+  spacing,
+} from '@/ui';
 
 export default function SearchScreen() {
   const { session } = useSession();
   const playQueue = usePlayerStore((s) => s.playQueue);
   const [query, setQuery] = useState('');
   const [filters, setFilters] = useState<SearchFilterState>(DEFAULT_SEARCH_FILTERS);
+  const [source, setSource] = useState<SearchSource>(DEFAULT_SEARCH_SOURCE);
+  const [dismissedErrorKey, setDismissedErrorKey] = useState<string | null>(null);
   const debouncedQuery = useDebouncedValue(query, 300);
 
   const searchParams = useMemo(
@@ -34,135 +56,227 @@ export default function SearchScreen() {
   );
   const intent = useMemo(() => hasSearchIntent(query, filters), [query, filters]);
   const activeSearch = hasActiveSearch(searchParams);
-  const search = useSearchTracks(searchParams);
+  const trimmedQuery = normalizeText(debouncedQuery) ?? '';
   const debouncing = query !== debouncedQuery;
+  const disabled = !isSupabaseConfigured || !session;
+  const localEnabled = !disabled && source !== 'audius';
+  const audiusEnabled =
+    !disabled && source !== 'catalog' && trimmedQuery.length >= AUDIUS_MIN_QUERY_LENGTH;
+  const localQueryActive = localEnabled && activeSearch;
 
-  const showLoading = activeSearch && (debouncing || search.isLoading || search.isFetching);
-  const showPreSearch = !intent && !activeSearch;
+  const search = useSearchTracks(searchParams, { enabled: localEnabled });
+  const audius = useAudiusSearch(debouncedQuery, { enabled: audiusEnabled });
+
+  const localResults = localQueryActive ? (search.data ?? []) : [];
+  const audiusResults = audiusEnabled ? (audius.data ?? []) : [];
+  const results = mergeSearchResults(localResults, audiusResults);
+
+  const localLoading =
+    localQueryActive && (debouncing || search.isLoading || search.isFetching);
+  const audiusLoading =
+    audiusEnabled && (debouncing || audius.isLoading || audius.isFetching);
+  const isLoading = localLoading || audiusLoading;
+  const localError = localQueryActive ? search.error : null;
+  const audiusError = audiusEnabled ? audius.error : null;
+  const activeSourceCount = (localQueryActive ? 1 : 0) + (audiusEnabled ? 1 : 0);
+
+  const showLoading = results.length === 0 && isLoading;
+  const allActiveFailed =
+    activeSourceCount > 0 &&
+    !isLoading &&
+    (localQueryActive ? !!localError : true) &&
+    (audiusEnabled ? !!audiusError : true);
+  const hasPartialError = !!(localError || audiusError) && !allActiveFailed;
+  const showPreSearch = !intent && source !== 'audius' && !disabled;
+  const showBrowse = !disabled && showPreSearch;
+  const showAudiusPrompt =
+    !disabled && source === 'audius' && trimmedQuery.length === 0;
+  const showAudiusShort =
+    !disabled &&
+    source === 'audius' &&
+    trimmedQuery.length > 0 &&
+    trimmedQuery.length < AUDIUS_MIN_QUERY_LENGTH;
+  const showAllShortCaption =
+    !disabled &&
+    source === 'all' &&
+    trimmedQuery.length > 0 &&
+    trimmedQuery.length < AUDIUS_MIN_QUERY_LENGTH;
   const showEmpty =
-    activeSearch &&
+    !disabled &&
+    !showPreSearch &&
+    !showAudiusPrompt &&
+    !showAudiusShort &&
     !showLoading &&
-    !search.error &&
-    (search.data?.length ?? 0) === 0;
+    !allActiveFailed &&
+    activeSourceCount > 0 &&
+    results.length === 0;
+  const showResults =
+    !disabled &&
+    !showPreSearch &&
+    !showAudiusPrompt &&
+    !showAudiusShort &&
+    !showLoading &&
+    !allActiveFailed &&
+    results.length > 0;
+
+  const errorKey = `${source}:${debouncedQuery}`;
+  const showPartialError = hasPartialError && dismissedErrorKey !== errorKey;
+  const failedSources = [
+    localError ? 'Duskwave' : null,
+    audiusError ? 'Audius' : null,
+  ].filter((value): value is string => value !== null);
+
+  const clearSearch = () => {
+    setQuery('');
+    setFilters(DEFAULT_SEARCH_FILTERS);
+  };
+
+  const retry = () => {
+    setDismissedErrorKey(null);
+    if (localQueryActive) void search.refetch();
+    if (audiusEnabled) void audius.refetch();
+  };
+
+  const browseCategory = (category: BrowseCategory) => {
+    if (category.genre) {
+      router.push({ pathname: '/genre/[name]', params: { name: category.genre } });
+      return;
+    }
+
+    setQuery('');
+    setFilters({
+      ...DEFAULT_SEARCH_FILTERS,
+      genre: category.genre ?? null,
+      mood: category.mood ?? null,
+    });
+  };
 
   return (
     <Screen padded={false} edges={['top']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text variant="title">Search</Text>
-          <Text muted>Tracks, moods, and BPM from the Duskwave catalog.</Text>
+          <SearchField value={query} onChangeText={setQuery} onClear={clearSearch} />
         </View>
 
-        <TextField
-          value={query}
-          onChangeText={setQuery}
-          placeholder="Try 'slow burn', 'rainy', or an artist"
-          autoCapitalize="none"
-          autoCorrect={false}
-          clearButtonMode="while-editing"
-          returnKeyType="search"
-          hint="Search uses the catalog only."
-        />
+        <SourceFilterChips source={source} onChange={setSource} />
 
-        <FilterPills
-          label="Genre"
-          options={SEARCH_GENRES}
-          selected={filters.genre}
-          onSelect={(value) =>
-            setFilters((prev) => ({ ...prev, genre: toggleChipValue(prev.genre, value) }))
-          }
-        />
+        {!disabled && !showPreSearch && source !== 'audius' ? (
+          <SearchFilterChips filters={filters} onChange={setFilters} />
+        ) : null}
 
-        <FilterPills
-          label="Mood"
-          options={SEARCH_MOODS}
-          selected={filters.mood}
-          onSelect={(value) =>
-            setFilters((prev) => ({ ...prev, mood: toggleChipValue(prev.mood, value) }))
-          }
-        />
-
-        <View style={styles.filterGroup}>
-          <Text variant="label" muted>
-            BPM
+        {!disabled && source === 'all' && !showPreSearch && isFilterActive(filters) ? (
+          <Text variant="caption" muted style={styles.filterCaption}>
+            Filters apply to Duskwave results only.
           </Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.pillRow}>
-            {SEARCH_BPM_RANGES.map((range) => (
-              <Pill
-                key={range.id}
-                label={range.label}
-                selected={filters.bpmRangeId === range.id}
-                onPress={() =>
-                  setFilters((prev) => ({
-                    ...prev,
-                    bpmRangeId: selectBpmRange(prev.bpmRangeId, range.id),
-                  }))
-                }
-              />
-            ))}
-          </ScrollView>
-        </View>
-
-        {!isSupabaseConfigured || !session ? (
-          <EmptyState
-            title="Catalog unavailable"
-            body={
-              !isSupabaseConfigured
-                ? 'Supabase is not configured, so catalog search cannot load.'
-                : 'Sign in to search the catalog.'
-            }
-          />
         ) : null}
 
-        {showPreSearch && isSupabaseConfigured && session ? (
-          <EmptyState
-            title="Find something to play"
-            body="Start typing or pick a genre, mood, or BPM range. Results come from licensed catalog tracks."
-          />
-        ) : null}
+        <View style={styles.body}>
+          {disabled ? (
+            <EmptyState
+              title="Catalog unavailable"
+              body={
+                !isSupabaseConfigured
+                  ? 'Supabase is not configured, so catalog search cannot load.'
+                  : 'Sign in to search the catalog.'
+              }
+            />
+          ) : null}
 
-        {showLoading ? (
-          <View style={styles.results}>
-            <Text variant="label" muted>
-              Searching catalog…
-            </Text>
-            <TrackListSkeleton rows={6} />
-          </View>
-        ) : null}
+          {showAudiusPrompt ? (
+            <EmptyState title="Search Audius" body="Search Audius for a song or artist." />
+          ) : null}
 
-        {!showLoading && search.error ? (
-          <EmptyState
-            title="Search failed"
-            body={search.error instanceof Error ? search.error.message : 'Please try again in a moment.'}
-          />
-        ) : null}
+          {showAudiusShort ? (
+            <EmptyState
+              title="Keep typing"
+              body={`Type at least ${AUDIUS_MIN_QUERY_LENGTH} characters to search Audius.`}
+            />
+          ) : null}
 
-        {showEmpty ? (
-          <EmptyState
-            title="No catalog tracks found"
-            body="Try a different query or clear a filter. Only playable catalog tracks appear here."
-          />
-        ) : null}
+          {showBrowse ? <BrowseAll onSelect={browseCategory} /> : null}
 
-        {!showLoading && !search.error && (search.data?.length ?? 0) > 0 ? (
-          <View style={styles.results}>
-            <Text variant="label" muted>
-              {search.data?.length} result{search.data?.length === 1 ? '' : 's'}
-            </Text>
-            <View style={styles.trackList}>
-              {search.data?.map((track, index) => (
-                <TrackRow
-                  key={track.id}
-                  title={track.title}
-                  artist={track.artist}
-                  artworkUrl={track.coverUrl}
-                  durationMs={track.durationMs}
-                  onPress={() => void playQueue(search.data ?? [], index, 'search')}
-                />
-              ))}
+          {showLoading ? (
+            <View style={styles.results}>
+              <TrackListSkeleton rows={6} />
             </View>
-          </View>
-        ) : null}
+          ) : null}
+
+          {allActiveFailed ? (
+            <EmptyState
+              title="Search failed"
+              body="Please try again in a moment."
+              action={<Button label="Retry" onPress={retry} />}
+            />
+          ) : null}
+
+          {showPartialError ? (
+            <View style={styles.notice}>
+              <Text variant="caption" muted style={styles.noticeText}>
+                {failedSources.join(' and ')} search failed. Showing available results.
+              </Text>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Dismiss search error"
+                onPress={() => setDismissedErrorKey(errorKey)}
+              >
+                <Text variant="caption" style={styles.noticeAction}>
+                  Dismiss
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {showEmpty ? (
+            <EmptyState
+              title="No tracks found"
+              body={
+                source === 'catalog'
+                  ? 'Try a different query or clear a filter. Only playable Duskwave tracks appear here.'
+                  : 'Try a different query or source.'
+              }
+            />
+          ) : null}
+
+          {showResults ? (
+            <View style={styles.results}>
+              <Text variant="caption" muted style={styles.resultCount}>
+                {results.length} result{results.length === 1 ? '' : 's'}
+              </Text>
+              {showAllShortCaption ? (
+                <Text variant="caption" muted>
+                  Type at least {AUDIUS_MIN_QUERY_LENGTH} characters to search Audius.
+                </Text>
+              ) : null}
+              {results.length > 0 && audiusLoading && !localLoading ? (
+                <Text variant="caption" muted>
+                  Searching Audius...
+                </Text>
+              ) : null}
+              {results.length > 0 && localLoading && !audiusLoading ? (
+                <Text variant="caption" muted>
+                  Searching Duskwave...
+                </Text>
+              ) : null}
+              <View style={styles.trackList}>
+                {results.map((track, index) => (
+                  <TrackRow
+                    key={track.id}
+                    title={track.title}
+                    artist={track.artist}
+                    artworkUrl={track.coverUrl}
+                    badge={track.source === 'audius' ? 'Audius' : undefined}
+                    onPress={() => void playQueue(results, index, 'search')}
+                  />
+                ))}
+              </View>
+            </View>
+          ) : null}
+        </View>
       </ScrollView>
       <PlayerDock />
     </Screen>
@@ -171,15 +285,22 @@ export default function SearchScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxl,
-    gap: spacing.xl,
-  },
-  header: { gap: spacing.sm },
-  filterGroup: { gap: spacing.sm },
-  pillRow: { gap: spacing.sm, paddingVertical: 2 },
-  results: { gap: spacing.md },
+  content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.lg },
+  header: { paddingHorizontal: spacing.lg },
+  body: { paddingHorizontal: spacing.lg },
+  results: { gap: spacing.sm },
+  resultCount: { marginBottom: spacing.xs },
   trackList: { gap: spacing.xs },
+  filterCaption: { paddingHorizontal: spacing.lg },
+  notice: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    borderWidth: 1,
+    borderColor: colors.hairline,
+    borderRadius: radii.md,
+    padding: spacing.md,
+  },
+  noticeText: { flex: 1 },
+  noticeAction: { textDecorationLine: 'underline' },
 });

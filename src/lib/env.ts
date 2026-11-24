@@ -34,3 +34,31 @@ export const supabaseEnv = parseSupabaseEnv({
 });
 
 export const spotifyClientId = process.env.EXPO_PUBLIC_SPOTIFY_CLIENT_ID?.trim() || null;
+
+export type AudiusEnvInput = {
+  apiBaseUrl?: string | null;
+  appName?: string | null;
+};
+
+export type AudiusEnv = {
+  apiBaseUrl: string;
+  appName: string;
+};
+
+function normalizeAudiusBaseUrl(value: string | null | undefined): string {
+  const fallback = 'https://api.audius.co/v1';
+  const trimmed = value?.trim() || fallback;
+  return trimmed.replace(/\/+$/, '');
+}
+
+export function parseAudiusEnv(input: AudiusEnvInput = {}): AudiusEnv {
+  return {
+    apiBaseUrl: normalizeAudiusBaseUrl(input.apiBaseUrl),
+    appName: input.appName?.trim() || 'Duskwave',
+  };
+}
+
+export const audiusEnv = parseAudiusEnv({
+  apiBaseUrl: process.env.EXPO_PUBLIC_AUDIUS_API_URL,
+  appName: process.env.EXPO_PUBLIC_AUDIUS_APP_NAME,
+});

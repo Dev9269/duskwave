@@ -1,7 +1,12 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { getSupabase } from '@/lib/supabase';
-import type { Database, TrackSource } from '@/types/database';
+import type {
+  Database,
+  TrackSource as DatabaseTrackSource,
+} from '@/types/database';
+
+export type TrackSource = DatabaseTrackSource | 'audius';
 
 export const DEFAULT_SEARCH_LIMIT = 50;
 export const MIN_SEARCH_LIMIT = 1;
@@ -188,7 +193,7 @@ async function fetchAlbums(
   );
 }
 
-async function mapTrackRows(client: ArtistClient, rows: TrackRow[]): Promise<Track[]> {
+export async function mapTrackRows(client: ArtistClient, rows: TrackRow[]): Promise<Track[]> {
   if (rows.length === 0) return [];
 
   const albumIds = rows

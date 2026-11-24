@@ -1,24 +1,38 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { Alert, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 
 import { useSession } from '@/features/auth/session-provider';
 import { TrackListSkeleton } from '@/features/catalog/components/catalog-ui';
+import { SearchField } from '@/features/catalog/components/search-browse';
 import { useLikedTracks } from '@/features/catalog/hooks';
 import { usePlayerStore } from '@/features/player/player-store';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import {
   Button,
-  Card,
   EmptyState,
+  Pill,
   PlayerDock,
   Screen,
-  SectionHeader,
+  Skeleton,
   Text,
   TrackRow,
   colors,
+  fontFamily,
+  radii,
   spacing,
 } from '@/ui';
+
+type LibraryFilter = 'all' | 'liked' | 'playlists' | 'uploads';
+
+const FILTERS: { id: LibraryFilter; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'liked', label: 'Liked' },
+  { id: 'playlists', label: 'Playlists' },
+  { id: 'uploads', label: 'Uploads' },
+];
 
 export default function LibraryScreen() {
   const { session } = useSession();
@@ -26,88 +40,232 @@ export default function LibraryScreen() {
   const enabled = isSupabaseConfigured && !!session;
   const liked = useLikedTracks(enabled);
   const likedTracks = liked.data ?? [];
+  const [filter, setFilter] = useState<LibraryFilter>('all');
+  const [searching, setSearching] = useState(false);
+  const [query, setQuery] = useState('');
+
+  const normalizedQuery = query.trim().toLowerCase();
+  const filteredLiked = normalizedQuery
+    ? likedTracks.filter((track) =>
+        `${track.title} ${track.artist}`.toLowerCase().includes(normalizedQuery),
+      )
+    : likedTracks;
+  const showLikedList = filter === 'liked' || normalizedQuery.length > 0;
+  const songCount = likedTracks.length;
+
+  const toggleSearch = () => {
+    setSearching((prev) => {
+      if (prev) setQuery('');
+      return !prev;
+    });
+  };
 
   return (
     <Screen padded={false} edges={['top']}>
-      <ScrollView style={styles.scroll} contentContainerStyle={styles.content} showsVerticalScrollIndicator={false}>
+      <ScrollView
+        style={styles.scroll}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.header}>
-          <Text variant="title">Your library</Text>
-          <Text muted>Songs you keep, playlists you build, and the people you blend with.</Text>
+          <View style={styles.headerRow}>
+            <Text variant="title">Your Library</Text>
+            <View style={styles.headerActions}>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel={searching ? 'Close library search' : 'Search library'}
+                hitSlop={8}
+                onPress={toggleSearch}
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Ionicons
+                  name={searching ? 'close' : 'search'}
+                  size={24}
+                  color={colors.text}
+                />
+              </Pressable>
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Create playlist"
+                hitSlop={8}
+                onPress={() =>
+                  Alert.alert('Playlists', 'Playlist creation arrives in the next milestone.')
+                }
+                style={({ pressed }) => pressed && styles.pressed}
+              >
+                <Ionicons name="add" size={28} color={colors.text} />
+              </Pressable>
+            </View>
+          </View>
+          {searching ? (
+            <SearchField
+              value={query}
+              onChangeText={setQuery}
+              onClear={() => setQuery('')}
+              placeholder="Search in Your Library"
+              autoFocus
+            />
+          ) : null}
         </View>
 
-        <SectionHeader title="Liked songs" caption={`${likedTracks.length} track${likedTracks.length === 1 ? '' : 's'}`} />
-        {!isSupabaseConfigured || !session ? (
-          <EmptyState
-            title="Sign in to see liked songs"
-            body={
-              !isSupabaseConfigured
-                ? 'Supabase is not configured, so your library cannot load.'
-                : 'Like catalog tracks while listening and they will appear here.'
-            }
-            action={
-              !session ? (
-                <Button label="Sign in" variant="secondary" onPress={() => router.replace('/(auth)/welcome')} />
-              ) : undefined
-            }
-          />
-        ) : null}
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.filterRow}
+        >
+          {FILTERS.map((item) => (
+            <Pill
+              key={item.id}
+              label={item.label}
+              selected={filter === item.id}
+              onPress={() => setFilter(item.id)}
+            />
+          ))}
+        </ScrollView>
 
-        {enabled && liked.isLoading ? <TrackListSkeleton rows={5} /> : null}
+        <View style={styles.body}>
+          {!isSupabaseConfigured || !session ? (
+            <EmptyState
+              title="Sign in to see your library"
+              body={
+                !isSupabaseConfigured
+                  ? 'Supabase is not configured, so your library cannot load.'
+                  : 'Like catalog tracks while listening and they will appear here.'
+              }
+              action={
+                !session ? (
+                  <Button
+                    label="Sign in"
+                    variant="secondary"
+                    onPress={() => router.replace('/(auth)/welcome')}
+                  />
+                ) : undefined
+              }
+            />
+          ) : null}
 
-        {enabled && !liked.isLoading && liked.error ? (
-          <EmptyState
-            title="Couldn't load liked songs"
-            body={liked.error instanceof Error ? liked.error.message : 'Please try again in a moment.'}
-          />
-        ) : null}
+          {showLikedList ? (
+            <>
+              {enabled && liked.isLoading ? <TrackListSkeleton rows={5} /> : null}
 
-        {enabled && !liked.isLoading && !liked.error && likedTracks.length === 0 ? (
-          <EmptyState
-            title="No liked songs yet"
-            body="Tap the heart on the player or like tracks you enjoy from the catalog."
-          />
-        ) : null}
+              {enabled && !liked.isLoading && liked.error ? (
+                <EmptyState
+                  title="Couldn't load liked songs"
+                  body={
+                    liked.error instanceof Error
+                      ? liked.error.message
+                      : 'Please try again in a moment.'
+                  }
+                />
+              ) : null}
 
-        {enabled && !liked.isLoading && !liked.error && likedTracks.length > 0 ? (
-          <View style={styles.trackList}>
-            {likedTracks.map((track, index) => (
-              <TrackRow
-                key={track.id}
-                title={track.title}
-                artist={track.artist}
-                artworkUrl={track.coverUrl}
-                durationMs={track.durationMs}
-                onPress={() => void playQueue(likedTracks, index, 'liked')}
-              />
-            ))}
-          </View>
-        ) : null}
+              {enabled &&
+              !liked.isLoading &&
+              !liked.error &&
+              filteredLiked.length === 0 ? (
+                <EmptyState
+                  title={normalizedQuery ? 'No matches' : 'No liked songs yet'}
+                  body={
+                    normalizedQuery
+                      ? 'Try a different title or artist.'
+                      : 'Tap the heart on the player or like tracks you enjoy from the catalog.'
+                  }
+                />
+              ) : null}
 
-        <SectionHeader title="Playlists" caption="Coming in M2." />
-        <Pressable accessibilityRole="button" accessibilityState={{ disabled: true }} disabled>
-          <Card style={[styles.row, styles.disabled]}>
-            <View style={styles.icon}>
-              <Ionicons name="albums" size={20} color={colors.textFaint} />
-            </View>
-            <View style={styles.rowText}>
-              <Text variant="heading" muted>
-                Playlists
-              </Text>
-              <Text variant="caption" muted>
-                Create and manage playlists in the next milestone.
-              </Text>
-            </View>
-            <Ionicons name="lock-closed-outline" size={16} color={colors.textFaint} />
-          </Card>
-        </Pressable>
+              {enabled && !liked.isLoading && !liked.error && filteredLiked.length > 0 ? (
+                <View style={styles.trackList}>
+                  {filteredLiked.map((track, index) => (
+                    <TrackRow
+                      key={track.id}
+                      title={track.title}
+                      artist={track.artist}
+                      artworkUrl={track.coverUrl}
+                      onPress={() => void playQueue(filteredLiked, index, 'liked')}
+                    />
+                  ))}
+                </View>
+              ) : null}
+            </>
+          ) : null}
 
-        <SectionHeader title="Uploads" caption="Your own tracks live here once uploads ship." />
-        <Card raised style={styles.placeholder}>
-          <Text variant="heading">Nothing uploaded</Text>
-          <Text variant="caption" muted>
-            Free accounts get three uploads. Premium unlocks more, plus offline and crossfade.
-          </Text>
-        </Card>
+          {enabled && !showLikedList ? (
+            <>
+              {liked.isLoading ? (
+                <View style={styles.row}>
+                  <Skeleton width={56} height={56} radius={0} />
+                  <View style={styles.rowText}>
+                    <Skeleton width={120} height={14} />
+                    <Skeleton width={80} height={12} />
+                  </View>
+                </View>
+              ) : (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel={`Liked Songs, ${songCount} songs`}
+                  disabled={songCount === 0}
+                  onPress={() => void playQueue(likedTracks, 0, 'liked')}
+                  style={({ pressed }) => [
+                    styles.row,
+                    pressed && styles.rowPressed,
+                    songCount === 0 && styles.rowMuted,
+                  ]}
+                >
+                  <LinearGradient
+                    colors={['#3E1F6D', '#9B7BE0']}
+                    start={{ x: 0, y: 0 }}
+                    end={{ x: 1, y: 1 }}
+                    style={styles.likedTile}
+                  >
+                    <Ionicons name="heart" size={24} color={colors.text} />
+                  </LinearGradient>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle}>Liked Songs</Text>
+                    <Text variant="caption" muted>
+                      Playlist • {songCount} song{songCount === 1 ? '' : 's'}
+                    </Text>
+                  </View>
+                  <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+                </Pressable>
+              )}
+
+              <Pressable
+                accessibilityRole="button"
+                accessibilityLabel="Playlists"
+                onPress={() =>
+                  Alert.alert('Playlists', 'Playlist creation arrives in the next milestone.')
+                }
+                style={({ pressed }) => [styles.row, pressed && styles.rowPressed]}
+              >
+                <View style={styles.placeholderTile}>
+                  <Ionicons name="musical-notes" size={22} color={colors.textMuted} />
+                </View>
+                <View style={styles.rowText}>
+                  <Text style={styles.rowTitle}>Playlists</Text>
+                  <Text variant="caption" muted>
+                    Playlist creation arrives in the next milestone.
+                  </Text>
+                </View>
+                <Ionicons name="add" size={20} color={colors.textMuted} />
+              </Pressable>
+
+              {filter !== 'playlists' ? (
+                <View style={[styles.row, styles.rowMuted]}>
+                  <View style={styles.placeholderTile}>
+                    <Ionicons name="cloud-upload-outline" size={22} color={colors.textMuted} />
+                  </View>
+                  <View style={styles.rowText}>
+                    <Text style={styles.rowTitle}>Uploads</Text>
+                    <Text variant="caption" muted>
+                      Your own tracks live here once uploads ship.
+                    </Text>
+                  </View>
+                </View>
+              ) : null}
+            </>
+          ) : null}
+        </View>
       </ScrollView>
       <PlayerDock />
     </Screen>
@@ -116,24 +274,34 @@ export default function LibraryScreen() {
 
 const styles = StyleSheet.create({
   scroll: { flex: 1 },
-  content: {
-    paddingHorizontal: spacing.lg,
-    paddingTop: spacing.xxl,
-    paddingBottom: spacing.xxl,
+  content: { paddingTop: spacing.sm, paddingBottom: spacing.xxl, gap: spacing.lg },
+  header: { paddingHorizontal: spacing.lg, gap: spacing.md },
+  headerRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  headerActions: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg },
+  filterRow: { gap: spacing.sm, paddingHorizontal: spacing.lg, paddingVertical: spacing.xs },
+  body: { paddingHorizontal: spacing.lg, gap: spacing.sm },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: spacing.md,
+    height: 56,
+    backgroundColor: colors.surfaceRaised,
+    borderRadius: radii.sm,
+    overflow: 'hidden',
+    paddingRight: spacing.md,
   },
-  header: { gap: spacing.sm, marginBottom: spacing.sm },
-  trackList: { gap: spacing.xs },
-  row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  rowPressed: { backgroundColor: colors.elevated },
+  rowMuted: { opacity: 0.7 },
   rowText: { flex: 1, gap: 2 },
-  icon: {
-    width: 44,
-    height: 44,
-    borderRadius: 12,
+  rowTitle: { fontFamily: fontFamily.bodySemibold, fontSize: 15, lineHeight: 20, color: colors.text },
+  likedTile: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center' },
+  placeholderTile: {
+    width: 56,
+    height: 56,
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: colors.surfaceRaised,
+    backgroundColor: colors.elevated,
   },
-  disabled: { opacity: 0.7 },
-  placeholder: { gap: spacing.sm },
+  trackList: { gap: spacing.xs },
+  pressed: { opacity: 0.6 },
 });

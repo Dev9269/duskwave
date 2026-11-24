@@ -1,6 +1,6 @@
-import { StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 
-import { spacing } from '../tokens';
+import { fontFamily, spacing } from '../tokens';
 import { Text } from './text';
 
 export type SectionHeaderProps = {
@@ -22,9 +22,16 @@ export function SectionHeader({ title, caption, actionLabel, onActionPress }: Se
         ) : null}
       </View>
       {actionLabel ? (
-        <Text variant="label" accent onPress={onActionPress} suppressHighlighting>
-          {actionLabel}
-        </Text>
+        <Pressable
+          accessibilityRole="button"
+          hitSlop={8}
+          onPress={onActionPress}
+          style={({ pressed }) => pressed && styles.pressed}
+        >
+          <Text variant="caption" muted style={styles.action}>
+            {actionLabel}
+          </Text>
+        </Pressable>
       ) : null}
     </View>
   );
@@ -33,11 +40,13 @@ export function SectionHeader({ title, caption, actionLabel, onActionPress }: Se
 const styles = StyleSheet.create({
   row: {
     flexDirection: 'row',
-    alignItems: 'flex-end',
+    alignItems: 'center',
     justifyContent: 'space-between',
     gap: spacing.md,
     marginTop: spacing.xl,
     marginBottom: spacing.md,
   },
   titles: { gap: 2, flexShrink: 1 },
+  action: { fontFamily: fontFamily.bodySemibold, letterSpacing: 0.2 },
+  pressed: { opacity: 0.7 },
 });

@@ -6,8 +6,12 @@ import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
-import { Fraunces_600SemiBold, Fraunces_700Bold } from '@expo-google-fonts/fraunces';
-import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold } from '@expo-google-fonts/inter';
+import {
+  Inter_400Regular,
+  Inter_500Medium,
+  Inter_600SemiBold,
+  Inter_700Bold,
+} from '@expo-google-fonts/inter';
 
 import { SessionProvider, isOnboarded, useSession } from '@/features/auth/session-provider';
 import { queryClient } from '@/lib/query-client';
@@ -16,6 +20,7 @@ import {
   startPlayerPersistence,
   stopPlayerPersistence,
 } from '@/features/player/persistence';
+import { usePlayerStore } from '@/features/player/player-store';
 import { colors } from '@/ui';
 
 void SplashScreen.preventAutoHideAsync().catch(() => {});
@@ -29,9 +34,18 @@ function PlayerBootstrap() {
       // Restore must never block app startup on errors.
     });
 
+    const sleepTimer = setInterval(() => {
+      const state = usePlayerStore.getState();
+      if (state.sleepTimerEndsAt !== null && Date.now() >= state.sleepTimerEndsAt) {
+        usePlayerStore.setState({ sleepTimerEndsAt: null });
+        if (state.isPlaying) state.toggle();
+      }
+    }, 1000);
+
     return () => {
       active = false;
       void active; // satisfy lint for unused in some configs; cleanup runs regardless
+      clearInterval(sleepTimer);
       stopPlayerPersistence();
     };
   }, []);
@@ -65,8 +79,13 @@ function RootNavigator() {
       <Stack.Protected guard={session !== null && onboarded}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="player" options={{ presentation: 'modal' }} />
+        <Stack.Screen name="profile" />
         <Stack.Screen name="settings/index" />
         <Stack.Screen name="licenses" />
+        <Stack.Screen name="album/[id]" />
+        <Stack.Screen name="artist/[id]" />
+        <Stack.Screen name="playlist/[id]" />
+        <Stack.Screen name="genre/[name]" />
       </Stack.Protected>
     </Stack>
   );
@@ -74,11 +93,10 @@ function RootNavigator() {
 
 export default function RootLayout() {
   const [fontsLoaded] = useFonts({
-    Fraunces_600SemiBold,
-    Fraunces_700Bold,
     Inter_400Regular,
     Inter_500Medium,
     Inter_600SemiBold,
+    Inter_700Bold,
   });
 
   useEffect(() => {

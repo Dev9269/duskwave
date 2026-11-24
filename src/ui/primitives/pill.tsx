@@ -14,10 +14,11 @@ export function Pill({ label, selected, onPress }: PillProps) {
     <Pressable
       accessibilityRole="button"
       accessibilityState={{ selected: !!selected }}
+      hitSlop={4}
       onPress={onPress}
-      style={[styles.base, selected && styles.selected]}
+      style={({ pressed }) => [styles.base, selected && styles.selected, pressed && styles.pressed]}
     >
-      <Text variant="label" style={selected ? styles.selectedLabel : styles.label}>
+      <Text variant="label" style={[styles.label, selected && styles.selectedLabel]}>
         {label}
       </Text>
     </Pressable>
@@ -26,14 +27,13 @@ export function Pill({ label, selected, onPress }: PillProps) {
 
 const styles = StyleSheet.create({
   base: {
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 6,
     borderRadius: radii.pill,
-    borderWidth: 1,
-    borderColor: colors.hairline,
-    backgroundColor: colors.surface,
+    backgroundColor: colors.hairline,
   },
-  selected: { backgroundColor: colors.accent, borderColor: colors.accent },
-  label: { color: colors.textMuted },
+  selected: { backgroundColor: colors.text },
+  pressed: { opacity: 0.8 },
+  label: { color: colors.text },
   selectedLabel: { color: colors.ink },
 });

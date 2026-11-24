@@ -14,6 +14,7 @@ import {
 } from './engine';
 
 export type PlayContext = DatabasePlayContext;
+export type RepeatMode = 'off' | 'all' | 'one';
 
 export type QueueSnapshot = {
   queue: Track[];
@@ -66,15 +67,24 @@ export function replaceQueue(
 export type PlayerState = QueueSnapshot & {
   isPlaying: boolean;
   error: string | null;
+  shuffle: boolean;
+  repeat: RepeatMode;
+  sleepTimerEndsAt: number | null;
   playQueue: (tracks: Track[], startIndex: number, context: PlayContext) => Promise<void>;
   toggle: () => void;
   next: () => void;
   previous: () => void;
   seek: (positionMs: number) => Promise<void>;
   appendToQueue: (track: Track) => Promise<void>;
+  toggleShuffle: () => void;
+  cycleRepeat: () => void;
+  setSleepTimer: (minutes: number | null) => void;
+  removeFromQueue: (index: number) => Promise<void>;
+  moveInQueue: (from: number, to: number) => Promise<void>;
 };
 
-const INITIAL_STATE: QueueSnapshot & Pick<PlayerState, 'isPlaying' | 'error'> = {
+const INITIAL_STATE: QueueSnapshot &
+  Pick<PlayerState, 'isPlaying' | 'error' | 'shuffle' | 'repeat' | 'sleepTimerEndsAt'> = {
   queue: [],
   index: 0,
   context: 'history',
@@ -83,6 +93,9 @@ const INITIAL_STATE: QueueSnapshot & Pick<PlayerState, 'isPlaying' | 'error'> = 
   currentTrack: null,
   isPlaying: false,
   error: null,
+  shuffle: false,
+  repeat: 'off',
+  sleepTimerEndsAt: null,
 };
 
 function errorMessage(error: unknown): string {
@@ -147,7 +160,20 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
   next: () => {
     const state = get();
-    const nextIndex = getNextQueueIndex(state.index, state.queue.length);
+    if (state.queue.length === 0) return;
+
+    let nextIndex = state.index;
+    if (state.shuffle && state.queue.length > 1) {
+      while (nextIndex === state.index) {
+        nextIndex = Math.floor(Math.random() * state.queue.length);
+      }
+    } else {
+      nextIndex = getNextQueueIndex(
+        state.index,
+        state.queue.length,
+        state.repeat === 'all',
+      );
+    }
     if (nextIndex === state.index) return;
 
     set({
@@ -160,7 +186,13 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
   },
   previous: () => {
     const state = get();
-    const previousIndex = getPreviousQueueIndex(state.index, state.queue.length);
+    if (state.queue.length === 0) return;
+
+    const previousIndex = getPreviousQueueIndex(
+      state.index,
+      state.queue.length,
+      state.repeat === 'all',
+    );
     if (previousIndex === state.index) return;
 
     set({
@@ -204,6 +236,57 @@ export const usePlayerStore = create<PlayerState>((set, get) => ({
     try {
       await appendTrack(track);
       set({ queue: [...get().queue, track], error: null });
+    } catch (error) {
+      set({ error: errorMessage(error) });
+    }
+  },
+  toggleShuffle: () => {
+    set((state) => ({ shuffle: !state.shuffle }));
+  },
+  cycleRepeat: () => {
+    set((state) => ({
+      repeat: state.repeat === 'off' ? 'all' : state.repeat === 'all' ? 'one' : 'off',
+    }));
+  },
+  setSleepTimer: (minutes) => {
+    set({
+      sleepTimerEndsAt: minutes === null ? null : Date.now() + minutes * 60_000,
+    });
+  },
+  removeFromQueue: async (targetIndex) => {
+    const state = get();
+    if (targetIndex < 0 || targetIndex >= state.queue.length || state.queue.length <= 1) return;
+
+    const queue = state.queue.filter((_, i) => i !== targetIndex);
+    const index = Math.min(state.index, queue.length - 1);
+    set({ queue, index, currentTrack: queue[index] ?? null, error: null });
+
+    try {
+      await loadQueue(queue, index, { autoplay: state.isPlaying, context: state.context });
+    } catch (error) {
+      set({ error: errorMessage(error) });
+    }
+  },
+  moveInQueue: async (from, to) => {
+    const state = get();
+    if (
+      from === to ||
+      from < 0 ||
+      to < 0 ||
+      from >= state.queue.length ||
+      to >= state.queue.length
+    ) {
+      return;
+    }
+
+    const queue = [...state.queue];
+    const [moved] = queue.splice(from, 1);
+    queue.splice(to, 0, moved);
+    const index = state.index === from ? to : state.index;
+    set({ queue, index, currentTrack: queue[index] ?? null, error: null });
+
+    try {
+      await loadQueue(queue, index, { autoplay: state.isPlaying, context: state.context });
     } catch (error) {
       set({ error: errorMessage(error) });
     }

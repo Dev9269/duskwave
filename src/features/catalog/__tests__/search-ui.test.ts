@@ -9,10 +9,13 @@ jest.mock('@/lib/supabase', () => ({
 
 import {
   DEFAULT_SEARCH_FILTERS,
+  DEFAULT_SEARCH_SOURCE,
   SEARCH_BPM_RANGES,
+  SEARCH_SOURCES,
   buildSearchParams,
   getBpmRange,
   hasSearchIntent,
+  isFilterActive,
   selectBpmRange,
   toggleChipValue,
 } from '@/features/catalog/components/search-ui';
@@ -55,6 +58,15 @@ describe('search-ui helpers', () => {
       limit: 30,
       offset: 0,
     });
+  });
+
+  it('defaults to All and detects active filters', () => {
+    expect(DEFAULT_SEARCH_SOURCE).toBe('all');
+    expect(SEARCH_SOURCES.map((item) => item.id)).toEqual(['all', 'catalog', 'audius']);
+    expect(isFilterActive(DEFAULT_SEARCH_FILTERS)).toBe(false);
+    expect(isFilterActive({ ...DEFAULT_SEARCH_FILTERS, genre: 'folk' })).toBe(true);
+    expect(isFilterActive({ ...DEFAULT_SEARCH_FILTERS, mood: 'chill' })).toBe(true);
+    expect(isFilterActive({ ...DEFAULT_SEARCH_FILTERS, bpmRangeId: 'fast' })).toBe(true);
   });
 
   it('detects search intent from query or filters', () => {

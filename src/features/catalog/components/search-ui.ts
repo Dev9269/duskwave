@@ -3,6 +3,26 @@ import { clampLimit, normalizeText, type SearchTracksParams } from '../api';
 export const SEARCH_GENRES = ['ambient', 'electronic', 'folk', 'jazz', 'pop', 'rock'] as const;
 export const SEARCH_MOODS = ['calm', 'chill', 'energetic', 'focus', 'melancholy', 'uplifting'] as const;
 
+export type BrowseCategory = {
+  id: string;
+  label: string;
+  color: string;
+  icon: 'musical-notes' | 'pulse' | 'flash' | 'cafe' | 'leaf' | 'cloudy' | 'moon' | 'headset';
+  genre?: string;
+  mood?: string;
+};
+
+export const BROWSE_CATEGORIES: readonly BrowseCategory[] = [
+  { id: 'pop', label: 'Pop', color: '#8D67AB', icon: 'musical-notes', genre: 'pop' },
+  { id: 'electronic', label: 'Electronic', color: '#DC148C', icon: 'pulse', genre: 'electronic' },
+  { id: 'rock', label: 'Rock', color: '#E91429', icon: 'flash', genre: 'rock' },
+  { id: 'jazz', label: 'Jazz', color: '#1E3264', icon: 'moon', genre: 'jazz' },
+  { id: 'folk', label: 'Folk', color: '#608108', icon: 'leaf', genre: 'folk' },
+  { id: 'ambient', label: 'Ambient', color: '#0D72EA', icon: 'cloudy', genre: 'ambient' },
+  { id: 'chill', label: 'Chill', color: '#D84000', icon: 'cafe', mood: 'chill' },
+  { id: 'focus', label: 'Focus', color: '#503750', icon: 'headset', mood: 'focus' },
+];
+
 export type BpmRange = {
   id: string;
   label: string;
@@ -28,6 +48,20 @@ export const DEFAULT_SEARCH_FILTERS: SearchFilterState = {
   mood: null,
   bpmRangeId: 'any',
 };
+
+export type SearchSource = 'all' | 'catalog' | 'audius';
+
+export const DEFAULT_SEARCH_SOURCE: SearchSource = 'all';
+
+export const SEARCH_SOURCES: readonly { id: SearchSource; label: string }[] = [
+  { id: 'all', label: 'All' },
+  { id: 'catalog', label: 'Duskwave' },
+  { id: 'audius', label: 'Audius' },
+];
+
+export function isFilterActive(filters: SearchFilterState): boolean {
+  return filters.genre !== null || filters.mood !== null || filters.bpmRangeId !== 'any';
+}
 
 export function toggleChipValue(current: string | null, value: string): string | null {
   return current === value ? null : value;

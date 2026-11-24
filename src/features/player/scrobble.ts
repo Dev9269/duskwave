@@ -2,7 +2,11 @@ import type { Track } from '@/features/catalog/api';
 
 export type PlayContext = 'album' | 'playlist' | 'search' | 'blend' | 'jam' | 'liked' | 'history';
 
-type TrackLike = Pick<Track, 'id' | 'durationMs'>;
+type TrackLike = Pick<Track, 'id' | 'durationMs' | 'source'>;
+
+export function isScrobbleableTrack(track: Pick<Track, 'source'>): boolean {
+  return track.source !== 'audius';
+}
 
 type ScrobbleRecord = {
   localId: string;
@@ -197,6 +201,12 @@ export async function startScrobble(track: TrackLike, context: PlayContext): Pro
     ensureAppStateListener();
     await loadQueue();
     await finalizeActive();
+
+    if (!isScrobbleableTrack(track)) {
+      active = null;
+      lastReportedMs = 0;
+      return;
+    }
 
     const auth = await getAuthenticatedClient();
     if (!auth) {
